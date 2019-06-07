@@ -1,22 +1,22 @@
 <template>
   <div class="home">
-    <Navbar/>
-    <Form/>
+    <TheNavbar/>
+    <TheForm/>
   </div>
 </template>
 
 <script>
 // @ is an alias to /src
-import Navbar from '@/components/Navbar.vue'
-import Form from '@/components/Form.vue'
+import TheNavbar from '@/components/TheNavbar.vue'
+import TheForm from '@/components/TheForm.vue'
 
 const axios = require('axios')
 
 export default {
   name: 'home',
   components: {
-    Navbar,
-    Form
+    TheNavbar,
+    TheForm
   }
 }
 </script>
