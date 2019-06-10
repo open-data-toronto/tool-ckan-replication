@@ -4,12 +4,16 @@
     <sui-input
       type="password"
       icon="lock"
-      iconPosition="left"/>
+      iconPosition="left"
+      @change="$emit('set-apikey', $event.target.value, type)"/>
   </sui-form-field>
 </template>
 
 <script>
 export default {
-  name: 'FormAPIKey'
+  name: 'FormAPIKey',
+  props: {
+    type: String
+  }
 }
 </script>
