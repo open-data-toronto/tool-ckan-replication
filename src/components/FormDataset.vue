@@ -7,25 +7,30 @@
       iconPosition="left"
       v-model="value"
       v-on:change="update"/>
-    <sui-message negative v-show="error">
-      <sui-message-header>Invalid URL</sui-message-header>
-      <p>eg. <i>https://ckanadmin.prod-toronto.ca/dataset/bodysafe</i></p>
-    </sui-message>
+    <ErrorMessage title="Invalid URL" message="eg. https://ckanadmin.prod-toronto.ca/dataset/bodysafe" v-bind:show="error"/>
   </sui-form-field>
 </template>
 
 <script>
+import ErrorMessage from '@/components/ErrorMessage.vue'
+
 export default {
   name: 'FormDataset',
+  components: {
+    ErrorMessage
+  },
   methods: {
     update: function (event) {
-      try {
-        this.error = false
+      let value = event.target.value
 
-        this.$emit('set-dataset', new URL(event.target.value))
+      try {
+        value = new URL(value)
+        this.error = false
       } catch {
         this.error = true
       }
+
+      this.$emit('set-dataset', value)
     }
   },
   data () {

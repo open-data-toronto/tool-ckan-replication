@@ -22,12 +22,16 @@
             </sui-segment>
           </sui-grid-column>
         </sui-grid-row>
+        <sui-grid-row centered>
+          <sui-button basic
+            type="submit"
+            content="Show Data"
+            icon="right arrow"
+            label-position="right"
+            v-bind:disabled="this.dataset.url === null"/>
+        </sui-grid-row>
       </sui-grid>
-      <sui-button basic
-        type="submit"
-        content="Next"
-        icon="right arrow"
-        label-position="right"/>
+
     </sui-form>
   </div>
 </template>
@@ -48,9 +52,8 @@ export default {
   },
   methods: {
     loadPackage: function () {
+      // TODO: assert if urls are URL and no missing
       this.validate()
-
-      // TODO: assert if no errors and no missing
 
       const link = this.dataset.url.origin + '/api/3/action/package_show?id=' + this.dataset.url.pathname.split('/')[2]
       axios.get(
