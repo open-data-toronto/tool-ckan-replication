@@ -48,17 +48,18 @@ export default {
   },
   methods: {
     loadPackage: function () {
-      this.validateEnvs()
+      this.validate()
 
       // TODO: assert if no errors and no missing
 
       const link = this.dataset.url.origin + '/api/3/action/package_show?id=' + this.dataset.url.pathname.split('/')[2]
-      axios
-        .get(link)
-        .then(response => {
-            this.data = response.data.result
-          }
-        )
+      axios.get(
+        link
+      ).then(
+        response => {
+          this.data = response.data.result
+        }
+      )
     },
     setAPIKey: function (val, inst) {
       this[inst].key = val
