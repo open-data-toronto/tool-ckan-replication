@@ -6,26 +6,13 @@
       icon="right arrow"
       label-position="right"
       @click="$emit('toggle')"/>
-    <sui-modal v-model="open">
+    <sui-modal v-model="open" v-bind:closable="false">
       <sui-modal-header>{{ data !== null ? data.title : '' }}</sui-modal-header>
       <sui-modal-content scrolling>
-        <sui-modal-description>
-          <sui-table celled>
-            <sui-table-header>
-              <sui-table-row>
-                <sui-table-header-cell>Field</sui-table-header-cell>
-                <sui-table-header-cell>Value</sui-table-header-cell>
-              </sui-table-row>
-            </sui-table-header>
-            <sui-table-body>
-              <sui-table-row v-for="(value, name) in data">
-                <sui-table-cell>
-                  <sui-label>{{ name }}</sui-label>
-                </sui-table-cell>
-                <sui-table-cell>{{ value }}</sui-table-cell>
-              </sui-table-row>
-            </sui-table-body>
-          </sui-table>
+        <sui-modal-description v-if="data !== null">
+          <TableDisplay title='Organization' v-bind:fields='fields["organization"]' v-bind:data='data["organization"]'/>
+          <TableDisplay title='Dataset' v-bind:fields='fields["dataset"]' v-bind:data='data'/>
+          <TableDisplay title='Resource' v-for="resource in data['resources']" v-bind:fields='fields["resource"]' v-bind:data='resource'/>
         </sui-modal-description>
       </sui-modal-content>
       <sui-modal-actions>
@@ -37,11 +24,25 @@
 </template>
 
 <script>
+import TableDisplay from '@/components/TableDisplay.vue'
+
 export default {
   name: 'ModalExample',
+  components: {
+    TableDisplay
+  },
   props: {
     data: Object,
     open: Boolean
+  },
+  data () {
+    return {
+      fields: {
+        organization: ['id', 'name', 'title', 'description'],
+        dataset: ['id', 'name', 'title', 'notes', 'collection_method', 'excerpt', 'limitations', 'information_url', 'dataset_category', 'is_retired', 'refresh_rate', 'last_refreshed', 'formats', 'topics', 'owner_division', 'owner_section', 'owner_unit', 'owner_email', 'image_url'],
+        resource: ['id', 'name', 'description', 'datastore_active', 'url', 'extract_job', 'format']
+      }
+    }
   }
 }
 </script>
