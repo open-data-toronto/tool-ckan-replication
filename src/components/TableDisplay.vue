@@ -6,11 +6,11 @@
       </sui-table-row>
     </sui-table-header>
     <sui-table-body>
-      <sui-table-row v-for="name in fields">
+      <sui-table-row v-for="(value, key) in data" :key="key">
         <sui-table-cell>
-          <sui-label>{{ name }}</sui-label>
+          <sui-label>{{ key }}</sui-label>
         </sui-table-cell>
-        <sui-table-cell>{{ name in data ? data[name] : '' }}</sui-table-cell>
+        <sui-table-cell>{{ value }}</sui-table-cell>
       </sui-table-row>
     </sui-table-body>
   </sui-table>
@@ -21,8 +21,7 @@ export default {
   name: 'TableDisplay',
   props: {
     title: String,
-    data: Object,
-    fields: Array
+    data: Object
   }
 }
 </script>
