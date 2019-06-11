@@ -6,7 +6,7 @@
       icon="linkify"
       iconPosition="left"
       v-model="value"
-      v-on:change="update"/>
+      @change="update"/>
     <ErrorMessage title="Invalid URL" message="eg. https://ckanadmin.prod-toronto.ca/dataset/bodysafe" v-bind:show="error"/>
   </sui-form-field>
 </template>
@@ -30,7 +30,7 @@ export default {
         this.error = true
       }
 
-      this.$emit('set-dataset', value)
+      this.$emit('change', value, 'local', 'url')
     }
   },
   data () {

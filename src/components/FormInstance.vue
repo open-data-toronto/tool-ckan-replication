@@ -1,19 +1,22 @@
 <template>
   <sui-form-field required>
     <label>CKAN Instance</label>
-    <sui-dropdown button labeled
-      class="icon"
-      type="button"
-      icon="linkify"
+    <sui-dropdown
+      placeholder="CKAN Instance"
+      selection
       :options="instances"
-      v-model="value"
-      @change="$emit('set-instance', new URL($event.target.value))"/>
+      v-model="value"/>
   </sui-form-field>
 </template>
 
 <script>
 export default {
   name: 'FormInstance',
+  watch: {
+    value: function(value) {
+      this.$emit('change', value, 'remote', 'url')
+    }
+  },
   data () {
     return {
       value: 'https://ckanadmin.intra.prod-toronto.ca',

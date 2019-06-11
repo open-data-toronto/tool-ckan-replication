@@ -5,7 +5,7 @@
       type="password"
       icon="lock"
       iconPosition="left"
-      @change="$emit('set-apikey', $event.target.value, type)"/>
+      @change="$emit('change', $event.target.value, location, 'key')"/>
   </sui-form-field>
 </template>
 
@@ -13,7 +13,7 @@
 export default {
   name: 'FormAPIKey',
   props: {
-    type: String
+    location: String
   }
 }
 </script>

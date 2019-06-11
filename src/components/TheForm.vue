@@ -7,8 +7,8 @@
             <sui-segment basic>
               <sui-header attached="top" textAlign="center">Source</sui-header>
               <sui-segment attached="bottom">
-                <FormDataset @set-dataset="setDataset"/>
-                <FormAPIKey type="dataset" @set-apikey="setAPIKey"/>
+                <FormDataset @change="set"/>
+                <FormAPIKey location="local" @change="set"/>
               </sui-segment>
             </sui-segment>
           </sui-grid-column>
@@ -16,14 +16,14 @@
             <sui-segment basic>
               <sui-header attached="top" textAlign="center">Target</sui-header>
               <sui-segment attached="bottom">
-                <FormInstance @set-instance="setInstance"/>
-                <FormAPIKey type="instance" @set-apikey="setAPIKey"/>
+                <FormInstance @change="set"/>
+                <FormAPIKey location="remote" @change="set"/>
               </sui-segment>
             </sui-segment>
           </sui-grid-column>
         </sui-grid-row>
         <sui-grid-row centered>
-          <ModalDataset :data="data" :open="viewing" @toggle="toggle" @submit="replicate"/>
+          <ModalDataset :data="local" :open="state.open" @toggle="toggle" @submit="replicate"/>
         </sui-grid-row>
       </sui-grid>
     </sui-form>
@@ -37,6 +37,8 @@ import FormInstance from '@/components/FormInstance.vue'
 
 import ModalDataset from '@/components/ModalDataset.vue'
 
+import mixin from '@/mixin.js';
+
 const axios = require('axios')
 
 export default {
@@ -48,150 +50,206 @@ export default {
     ModalDataset
   },
   methods: {
+    clean: function (obj) {
+      Object.keys(obj).forEach(
+        (key) => (obj[key] == null) && delete obj[key]
+      )
+    },
+    buildURL: function (loc, endpoint) {
+      return loc.url.origin + '/api/3/action/' + endpoint
+    },
+    rollback: async function (err) {
+      console.log(err)
+
+      for (let r in this.remote.resources) {
+        await axios({
+          method: 'get',
+          url: this.buildURL(this.remote, 'resource_delete'),
+          params: {
+            id: this.remote.resources[r].id
+          }
+        })
+      }
+
+      await axios({
+        method: 'get',
+        url: this.buildURL(this.remote, 'package_delete'),
+        params: {
+          id: this.remote.package.id
+        }
+      })
+    },
     load: function () {
       // TODO: assert if urls are URL and no missing
       this.validate()
 
-      axios
-        .get(this.source.url.origin + '/api/3/action/package_show?id=' + this.source.url.pathname.split('/')[2])
-        .then(response => {
-          const result = response.data.result
+      axios({
+        method: 'get',
+        url: this.buildURL(this.local, 'package_show'),
+        params: {
+          'id': this.local.url.pathname.split('/')[2]
+        }
+      }).then(response => {
+        let result = response.data.result
 
-          this.data = {}
-
-          this.data.organization = (
-            ({ name, title, description }) =>
-            ({ name, title, description })
-          )(result.organization)
-
-          this.data.dataset = (
+        this.$set(this.local, 'organization', (({ name, title, description }) => ({ name, title, description }))(result.organization))
+        this.$set(
+          this.local,
+          'dataset',
+          (
             ({ name, title, notes, collection_method, excerpt, limitations, information_url, dataset_category, is_retired, refresh_rate, topics, owner_division, owner_section, owner_unit, owner_email, image_url }) =>
             ({ name, title, notes, collection_method, excerpt, limitations, information_url, dataset_category, is_retired, refresh_rate, topics, owner_division, owner_section, owner_unit, owner_email, image_url })
           )(result)
-
-          this.data.resources = result.resources.map(
+        )
+        this.$set(
+          this.local,
+          'resources',
+          result.resources.map(
             r => (
               ({ id, name, description, datastore_active, url, extract_job, format }) =>
               ({ id, name, description, datastore_active, url, extract_job, format })
             )(r)
           )
+        )
 
-          this.viewing = true
-        })
+        this.state.open = true
+      })
     },
     replicate: async function () {
-      const organization = await axios.get(this.source.url.origin + '/api/3/action/organization_show?id=' + this.data.organization.name)
-      this.data.dataset.owner_org = organization.data.result.id
-      this.data.dataset.name += 'test'
-      this.data.dataset.owner_org = 'e1d223a3-f1bd-4933-b49e-24786cee2af3'
-
-      Object.keys(this.data.dataset).forEach((key) => (this.data.dataset[key] == null) && delete this.data.dataset[key]);
-
-      const dataset = await axios.post(
-        this.target.url.origin + '/api/3/action/package_create',
-        this.data.dataset,
-        { headers: { 'Authorization' : this.target.key } }
+      this.$set(
+        this.remote,
+        'organization',
+        await axios({
+          method: 'get',
+          url: this.buildURL(this.remote, 'organization_show'),
+          params: {
+            id: this.local.organization.name
+          }
+        }).then(
+          response => response.data.result
+        )
       )
 
-      const dataset = await axios.get(this.target.url.origin + '/api/3/action/package_show?id=example-geospatial-polygons-datatest')
+      this.local.dataset.owner_org = this.remote.organization.id
 
-      for (const i in this.data.resources) {
-        let resource = this.data.resources[i]
+      this.local.dataset.name += '-test'
+      this.local.dataset.owner_org = 'e1d223a3-f1bd-4933-b49e-24786cee2af3'
 
-        resource.package_id = dataset.data.result.id
-        resource.url_type = 'upload'
+      this.clean(this.local.dataset)
+      this.$set(
+        this.remote,
+        'dataset',
+        await axios({
+          method: 'post',
+          url: this.buildURL(this.remote, 'package_create'),
+          data: this.local.dataset,
+          headers: {
+            'Authorization' : this.remote.key
+          }
+        }).then(
+          response => response.data.result
+        )
+      )
+
+      for (let i in this.local.resources) {
+        let resource = this.local.resources[i]
+
+        resource.package_id = this.remote.dataset.id
         resource.format = resource.format.toUpperCase()
 
-        Object.keys(resource).forEach((key) => (resource[key] == null) && delete resource[key]);
+        this.clean(resource)
 
         if (resource.datastore_active) {
-          let metadata = await axios.get(
-            this.source.url.origin + '/api/3/action/datastore_search',
-            {
-              params: {
-                resource_id: resource.id,
-                include_total: true,
-                limit: 0
-              }
+          let metadata = await axios({
+            method: 'get',
+            url: this.buildURL(this.local, 'datastore_search'),
+            params: {
+              resource_id: resource.id,
+              include_total: true,
+              limit: 0
             }
+          }).then(
+            response => response.data.result
           )
 
-          let content = await axios.get(
-            this.source.url.origin + '/api/3/action/datastore_search',
-            {
-              params: {
-                resource_id: resource.id,
-                include_total: false,
-                limit: metadata.data.result.total
-              }
+          let content = await axios({
+            method: 'get',
+            url: this.buildURL(this.local, 'datastore_search'),
+            params: {
+              resource_id: resource.id,
+              limit: metadata.total
             }
+          }).then(
+            response => response.data.result
           )
 
-          for (const row in content.data.result.records) {
-            delete content.data.result.records[row]._id
+          for (let row in content.records) {
+            delete content.records[row]._id
           }
 
-          delete resource.id
+          metadata.fields = metadata.fields.filter(row => row.id != '_id')
 
-          await axios.post(
-            this.target.url.origin + '/api/3/action/datastore_create',
-            {
+          delete resource.id
+          delete resource.url
+          await axios({
+            method: 'post',
+            url: this.buildURL(this.remote, 'datastore_create'),
+            data: {
               resource: resource,
-              fields: metadata.data.result.fields,
-              records: content.data.result.records
+              fields: metadata.fields,
+              records: content.records
             },
-            { headers: { 'Authorization' : this.target.key } }
-          )
-
+            headers: {
+              'Authorization' : this.remote.key
+            }
+          })
         } else {
-          continue
+          resource.url_type = 'upload'
+
           delete resource.id
-          await axios.post(
-            this.target.url.origin + '/api/3/action/resource_create',
-            resource,
-            { headers: { 'Authorization' : this.target.key } }
-          )
+          await axios({
+            method: 'post',
+            url: this.buildURL(this.remote, 'resource_create'),
+            data: resource,
+            headers: {
+              'Authorization' : this.remote.key
+            }
+          })
         }
       }
     },
-    // TODO: merge set functions
-    setAPIKey: function (val, inst) {
-      this[inst].key = val
-    },
-    setDataset: function (val) {
-      this.source.url = val
-    },
-    setInstance: function (val) {
-      this.target.url = val
+    set: function (value, loc, key) {
+      if (loc == 'local') {
+        this.$set(this.local, key, value)
+      } else {
+        this.$set(this.remote, key, value)
+      }
     },
     toggle: function () {
-      if (!this.viewing) { // before show - always load the dataset (ie. changes to the dataset input not tracked)
+      if (!this.state.open) { // before show - always load the dataset (ie. changes to the dataset input not tracked)
         // TODO: spin wheel while loading on the button before showing modal
         this.load()
       } else {
-        this.viewing = false
+        this.state.open = false
       }
     },
     validate: function () {
       this.error = true
-      // duplicate = this.source.url && this.target.url && this.source.url.host === this.target.url.host
+      // duplicate = this.local.url && this.remote.url && this.local.url.host === this.remote.url.host
     }
   },
   data () {
     return {
-      // Package data
-      data: null,
-      // Track state
-      failing: false,
-      viewing: false,
-      // Form inputs
-      source: {
+      local: {
         url: new URL('http://localhost:5000/dataset/example-geospatial-polygons-data'),
-        key: ''
       },
-      target: {
+      remote: {
         url: new URL('http://localhost:5000'),
         key: '3273a057-d6dc-482d-8a79-2a3615e9136e'
+      },
+      state: {
+        open: false,
+        error: false
       }
     }
   }
