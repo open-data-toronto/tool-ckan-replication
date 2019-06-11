@@ -37,8 +37,6 @@ import FormInstance from '@/components/FormInstance.vue'
 
 import ModalDataset from '@/components/ModalDataset.vue'
 
-import mixin from '@/mixin.js';
-
 const axios = require('axios')
 
 export default {
