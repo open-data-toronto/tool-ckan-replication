@@ -127,6 +127,19 @@ export default {
         }
       })
     },
+    publishDataset: function (context) {
+      axios({
+        method: 'post',
+        url: this.buildEndpoint(context, 'package_patch'),
+        data: {
+          id: context.dataset.id,
+          private: false
+        },
+        headers: {
+          'Authorization': context.key
+        }
+      })
+    },
     deleteDataset: async function (context) {
       for (let resource of context.resources) {
         await axios({

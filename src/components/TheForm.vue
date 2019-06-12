@@ -73,6 +73,10 @@ export default {
           await this.createResource(this.remote, resource)
         }
       }
+
+      await this.publishDataset(this.remote)
+
+      return true
     },
     set: function (value, loc, key) {
       let update = loc == 'local' ? this.local : this.remote
