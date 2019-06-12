@@ -1,6 +1,6 @@
 <template>
   <div is="sui-container">
-    <sui-form>
+    <sui-form @submit.prevent="replicate">
       <sui-grid divided="vertically">
         <sui-grid-row :columns="2">
           <sui-grid-column>
@@ -23,7 +23,7 @@
           </sui-grid-column>
         </sui-grid-row>
         <sui-grid-row centered>
-          <ModalDataset :data="local" :open="state.open" @toggle="toggle" @submit="replicate"/>
+          <ModalDataset :data="local" :open="state.open" @toggle="toggle"/>
         </sui-grid-row>
       </sui-grid>
     </sui-form>
@@ -37,7 +37,7 @@ import FormInstance from '@/components/FormInstance.vue'
 
 import ModalDataset from '@/components/ModalDataset.vue'
 
-const axios = require('axios')
+import ckan from '@/mixins/ckan.js'
 
 export default {
   name: 'TheForm',
@@ -47,189 +47,48 @@ export default {
     FormInstance,
     ModalDataset
   },
+  mixins: [
+    ckan
+  ],
   methods: {
-    clean: function (obj) {
-      Object.keys(obj).forEach(
-        (key) => (obj[key] == null) && delete obj[key]
-      )
-    },
-    buildURL: function (loc, endpoint) {
-      return loc.url.origin + '/api/3/action/' + endpoint
-    },
-    rollback: async function (err) {
-      console.log(err)
-
-      for (let r in this.remote.resources) {
-        await axios({
-          method: 'get',
-          url: this.buildURL(this.remote, 'resource_delete'),
-          params: {
-            id: this.remote.resources[r].id
-          }
-        })
+    load: async function () {
+      let content = await this.getDataset(this.local)
+      for (let [key, value] of Object.entries(content)) {
+        this.$set(this.local, key, value)
       }
-
-      await axios({
-        method: 'get',
-        url: this.buildURL(this.remote, 'package_delete'),
-        params: {
-          id: this.remote.package.id
-        }
-      })
-    },
-    load: function () {
-      // TODO: assert if urls are URL and no missing
-      this.validate()
-
-      axios({
-        method: 'get',
-        url: this.buildURL(this.local, 'package_show'),
-        params: {
-          'id': this.local.url.pathname.split('/')[2]
-        }
-      }).then(response => {
-        let result = response.data.result
-
-        this.$set(this.local, 'organization', (({ name, title, description }) => ({ name, title, description }))(result.organization))
-        this.$set(
-          this.local,
-          'dataset',
-          (
-            ({ name, title, notes, collection_method, excerpt, limitations, information_url, dataset_category, is_retired, refresh_rate, topics, owner_division, owner_section, owner_unit, owner_email, image_url }) =>
-            ({ name, title, notes, collection_method, excerpt, limitations, information_url, dataset_category, is_retired, refresh_rate, topics, owner_division, owner_section, owner_unit, owner_email, image_url })
-          )(result)
-        )
-        this.$set(
-          this.local,
-          'resources',
-          result.resources.map(
-            r => (
-              ({ id, name, description, datastore_active, url, extract_job, format }) =>
-              ({ id, name, description, datastore_active, url, extract_job, format })
-            )(r)
-          )
-        )
-
-        this.state.open = true
-      })
     },
     replicate: async function () {
-      this.$set(
-        this.remote,
-        'organization',
-        await axios({
-          method: 'get',
-          url: this.buildURL(this.remote, 'organization_show'),
-          params: {
-            id: this.local.organization.name
-          }
-        }).then(
-          response => response.data.result
-        )
-      )
+      // Update the local package organization ID with the remote organization ID
+      let remoteOrganization = await this.getOrganization(this.local)
+      this.$set(this.remote, 'organization', remoteOrganization)
 
-      this.local.dataset.owner_org = this.remote.organization.id
+      // Replicate the local package in remote
+      let replicant = await this.createDataset(this.remote, this.local.dataset)
+      this.$set(this.remote, 'dataset', replicant)
 
-      this.local.dataset.name += '-test'
-      this.local.dataset.owner_org = 'e1d223a3-f1bd-4933-b49e-24786cee2af3'
-
-      this.clean(this.local.dataset)
-      this.$set(
-        this.remote,
-        'dataset',
-        await axios({
-          method: 'post',
-          url: this.buildURL(this.remote, 'package_create'),
-          data: this.local.dataset,
-          headers: {
-            'Authorization' : this.remote.key
-          }
-        }).then(
-          response => response.data.result
-        )
-      )
-
-      for (let i in this.local.resources) {
-        let resource = this.local.resources[i]
-
-        resource.package_id = this.remote.dataset.id
-        resource.format = resource.format.toUpperCase()
-
-        this.clean(resource)
-
+      for (let resource of this.local.resources) {
         if (resource.datastore_active) {
-          let metadata = await axios({
-            method: 'get',
-            url: this.buildURL(this.local, 'datastore_search'),
-            params: {
-              resource_id: resource.id,
-              include_total: true,
-              limit: 0
-            }
-          }).then(
-            response => response.data.result
-          )
-
-          let content = await axios({
-            method: 'get',
-            url: this.buildURL(this.local, 'datastore_search'),
-            params: {
-              resource_id: resource.id,
-              limit: metadata.total
-            }
-          }).then(
-            response => response.data.result
-          )
-
-          for (let row in content.records) {
-            delete content.records[row]._id
-          }
-
-          metadata.fields = metadata.fields.filter(row => row.id != '_id')
-
-          delete resource.id
-          delete resource.url
-          await axios({
-            method: 'post',
-            url: this.buildURL(this.remote, 'datastore_create'),
-            data: {
-              resource: resource,
-              fields: metadata.fields,
-              records: content.records
-            },
-            headers: {
-              'Authorization' : this.remote.key
-            }
-          })
+          await this.createDatastore(this.local, this.remote, resource)
         } else {
-          resource.url_type = 'upload'
-
-          delete resource.id
-          await axios({
-            method: 'post',
-            url: this.buildURL(this.remote, 'resource_create'),
-            data: resource,
-            headers: {
-              'Authorization' : this.remote.key
-            }
-          })
+          await this.createResource(this.remote, resource)
         }
       }
     },
     set: function (value, loc, key) {
-      if (loc == 'local') {
-        this.$set(this.local, key, value)
-      } else {
-        this.$set(this.remote, key, value)
-      }
+      let update = loc == 'local' ? this.local : this.remote
+
+      this.$set(update, key, value)
     },
     toggle: function () {
-      if (!this.state.open) { // before show - always load the dataset (ie. changes to the dataset input not tracked)
+      if (!this.state.open) {
+        // TODO: assert if urls are URL and no missing
+        this.validate()
+
         // TODO: spin wheel while loading on the button before showing modal
         this.load()
-      } else {
-        this.state.open = false
       }
+
+      this.state.open = !this.state.open
     },
     validate: function () {
       this.error = true
