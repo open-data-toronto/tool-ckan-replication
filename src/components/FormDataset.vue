@@ -6,8 +6,7 @@
       icon="linkify"
       iconPosition="left"
       v-model="value"
-      @change="update"/>
-    <ErrorMessage title="Invalid URL" message="eg. https://ckanadmin.prod-toronto.ca/dataset/bodysafe" v-bind:show="error"/>
+      @change="$emit('change', $event.target.value, 'local', 'url')"/>
   </sui-form-field>
 </template>
 
@@ -16,26 +15,11 @@ import ErrorMessage from '@/components/ErrorMessage.vue'
 
 export default {
   name: 'FormDataset',
-  components: {
-    ErrorMessage
-  },
-  methods: {
-    update: function (event) {
-      let value = event.target.value
-
-      try {
-        value = new URL(value)
-        this.error = false
-      } catch {
-        this.error = true
-      }
-
-      this.$emit('change', value, 'local', 'url')
-    }
+  props: {
+    error: Boolean
   },
   data () {
     return {
-      error: false,
       value: ''
     }
   }

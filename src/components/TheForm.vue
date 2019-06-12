@@ -1,26 +1,29 @@
 <template>
   <div is="sui-container">
     <sui-form @submit.prevent="replicate">
-      <sui-grid divided="vertically">
+      <sui-grid>
         <sui-grid-row :columns="2">
           <sui-grid-column>
             <sui-segment basic>
-              <sui-header attached="top" textAlign="center">Source</sui-header>
+              <sui-header attached="top" textAlign="center">Origin</sui-header>
               <sui-segment attached="bottom">
-                <FormDataset @change="set"/>
+                <FormDataset :error="error.type == 'duplicate' || error.type == 'url'" @change="set"/>
                 <FormAPIKey location="local" @change="set"/>
               </sui-segment>
             </sui-segment>
           </sui-grid-column>
           <sui-grid-column>
             <sui-segment basic>
-              <sui-header attached="top" textAlign="center">Target</sui-header>
+              <sui-header attached="top" textAlign="center">Destination</sui-header>
               <sui-segment attached="bottom">
-                <FormInstance @change="set"/>
+                <FormInstance :error="error.type == 'duplicate'" @change="set"/>
                 <FormAPIKey location="remote" @change="set"/>
               </sui-segment>
             </sui-segment>
           </sui-grid-column>
+        </sui-grid-row>
+        <sui-grid-row centered>
+          <ErrorMessage :title="error.title" v-show="error.type.length > 0"/>
         </sui-grid-row>
         <sui-grid-row centered>
           <ModalDataset :data="local" :open="state.open" @toggle="toggle"/>
@@ -35,6 +38,8 @@ import FormAPIKey from '@/components/FormAPIKey.vue'
 import FormDataset from '@/components/FormDataset.vue'
 import FormInstance from '@/components/FormInstance.vue'
 
+import ErrorMessage from '@/components/ErrorMessage.vue'
+
 import ModalDataset from '@/components/ModalDataset.vue'
 
 import ckan from '@/mixins/ckan.js'
@@ -45,6 +50,7 @@ export default {
     FormAPIKey,
     FormDataset,
     FormInstance,
+    ErrorMessage,
     ModalDataset
   },
   mixins: [
@@ -66,6 +72,7 @@ export default {
       let replicant = await this.createDataset(this.remote, this.local.dataset)
       this.$set(this.remote, 'dataset', replicant)
 
+      // Replicate the resources
       for (let resource of this.local.resources) {
         if (resource.datastore_active) {
           await this.createDatastore(this.local, this.remote, resource)
@@ -76,27 +83,52 @@ export default {
 
       await this.publishDataset(this.remote)
 
+      await this.deleteDataset(this.local)
+
       return true
     },
     set: function (value, loc, key) {
       let update = loc == 'local' ? this.local : this.remote
+      let fail = false
 
-      this.$set(update, key, value)
+      if (key == 'url') {
+        try {
+          this.$set(update, key, new URL(value))
+
+          if (this.remote.url.origin == this.local.url.origin) {
+            this.error.type = 'duplicate'
+            this.error.title = 'Origin and destination CKAN instances can not be the same'
+            fail = true
+          }
+        } catch {
+          this.error.type = 'url'
+          this.error.title = 'Invalid URL'
+          fail = true
+        }
+      } else {
+        this.$set(update, key, value)
+      }
+
+      if (!fail) {
+        this.error.type = ''
+        this.error.title = ''
+        fail = true
+      }
     },
     toggle: function () {
       if (!this.state.open) {
-        // TODO: assert if urls are URL and no missing
-        this.validate()
+        if (!this.local.url || !this.local.key || !this.remote.url || !this.remote.key) {
+          this.error.type = 'missing'
+          this.error.title = 'Missing required fields'
+        } else if (this.error.type.length === '') {
+          this.state.open = true
 
-        // TODO: spin wheel while loading on the button before showing modal
-        this.load()
+          // TODO: spin wheel while loading on the button before showing modal
+          this.load()
+        }
+      } else {
+        this.state.open = false
       }
-
-      this.state.open = !this.state.open
-    },
-    validate: function () {
-      this.error = true
-      // duplicate = this.local.url && this.remote.url && this.local.url.host === this.remote.url.host
     }
   },
   data () {
@@ -108,9 +140,12 @@ export default {
         url: new URL('http://localhost:5000'),
         key: '3273a057-d6dc-482d-8a79-2a3615e9136e'
       },
+      error: {
+        type: '',
+        title: ''
+      },
       state: {
-        open: false,
-        error: false
+        open: false
       }
     }
   }

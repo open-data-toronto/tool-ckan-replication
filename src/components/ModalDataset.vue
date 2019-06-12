@@ -16,8 +16,8 @@
         </sui-modal-description>
       </sui-modal-content>
       <sui-modal-actions>
-        <sui-button negative @click="$emit('toggle')">Cancel</sui-button>
-        <sui-button primary @click="$emit('submit')">Submit</sui-button>
+        <sui-button type="button" negative @click="$emit('toggle')">Cancel</sui-button>
+        <sui-button type="button" primary @click="$emit('submit')">Submit</sui-button>
       </sui-modal-actions>
     </sui-modal>
   </div>

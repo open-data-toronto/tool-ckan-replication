@@ -1,5 +1,5 @@
 <template>
-  <sui-form-field required>
+  <sui-form-field required v-bind:class="{ error: error }">
     <label>CKAN Instance</label>
     <sui-dropdown
       placeholder="CKAN Instance"
@@ -12,8 +12,11 @@
 <script>
 export default {
   name: 'FormInstance',
+  props: {
+    error: Boolean
+  },
   watch: {
-    value: function(value) {
+    value: function (value) {
       this.$emit('change', value, 'remote', 'url')
     }
   },
