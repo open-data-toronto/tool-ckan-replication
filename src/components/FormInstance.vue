@@ -24,7 +24,6 @@ export default {
     return {
       value: '',
       instances: [
-        { text: 'Local (Test ONLY)', value: 'http://localhost:5000' },
         { text: 'Development', value: 'https://ckanadmin0.intra.dev-toronto.ca' },
         { text: 'Staging', value: 'https://ckanadmin0.intra.qa-toronto.ca' },
         { text: 'Production', value: 'https://ckanadmin.intra.prod-toronto.ca' }

@@ -2,64 +2,120 @@ const axios = require('axios')
 
 export default {
   methods: {
+    /**
+     * buildEndpoint() creates the CKAN API URL
+     *
+     * @param {Object} context  - CKAN state object
+     * @param {String} endpoint - endpoint name
+     *
+     * @return {String} URL for the API endpoint
+     */
     buildEndpoint: function (context, endpoint) {
       return context.url.origin + '/api/3/action/' + endpoint
     },
+
+    /**
+     * getOrganization() fetches the organization metadata
+     *
+     * @param {Object} context - CKAN state object
+     *
+     * @return {Object} CKAN organization
+     */
     getOrganization: function (context) {
       return axios({
         method: 'get',
         url: this.buildEndpoint(context, 'organization_show'),
         params: {
+          // Matches organization by name (instead of ID)
           id: context.organization.name
         }
       }).then(
         response => response.data.result
       )
     },
+
+    /**
+     * getDataset() fetches the package metadata
+     *
+     * @param {Object} context - CKAN state object
+     *
+     * @return {Object} CKAN package
+     */
     getDataset: function (context) {
       return axios({
         method: 'get',
         url: this.buildEndpoint(context, 'package_show'),
         params: {
+          // Parse out the package name assuming that the URL is the path to the
+          // dataset (eg. <protocol>://<host>/dataset/<package-name>)
           'id': context.url.pathname.split('/')[2]
         }
       }).then(response => {
         let result = response.data.result
         let content = {}
 
-        content.organization = (({ name, title, description }) => ({ name, title, description }))(result.organization)
-
-        content.dataset = (
-          ({ name, title, notes, collection_method, excerpt, limitations, information_url, dataset_category, is_retired, refresh_rate, topics, owner_division, owner_section, owner_unit, owner_email, image_url }) =>
-            ({ name, title, notes, collection_method, excerpt, limitations, information_url, dataset_category, is_retired, refresh_rate, topics, owner_division, owner_section, owner_unit, owner_email, image_url })
-        )(result)
-
+        // Store IDs separately to be referenced later for clean up/rollbacks
         content.datasetID = result.id
+        content.resourceIDs = result.resources.map(r => r.id)
+
+        // Clean up unnecessary fields (eg. IDs, dates) so that the entire
+        // object can be used later during create functions
+        content.organization = {
+          name: result.organization.name,
+          title: result.organization.title,
+          description: result.organization.description
+        }
+
+        content.dataset = {
+          name: result.name,
+          title: result.title,
+          notes: result.notes,
+          collection_method: result.collection_method,
+          excerpt: result.excerpt,
+          limitations: result.limitations,
+          information_url: result.information_url,
+          dataset_category: result.dataset_category,
+          is_retired: result.is_retired,
+          refresh_rate: result.refresh_rate,
+          topics: result.topics,
+          owner_division: result.owner_division,
+          owner_section: result.owner_section,
+          owner_unit: result.owner_unit,
+          owner_email: result.owner_email,
+          image_url: result.image_url
+        }
 
         content.resources = result.resources.map(
-          r => (
-            ({ id, name, description, datastore_active, url, extract_job, format }) =>
-              ({ id, name, description, datastore_active, url, extract_job, format })
-          )(r)
+          r => {
+            return {
+              name: r.name,
+              description: r.description,
+              datastore_active: r.datastore_active,
+              url: r.url,
+              extract_job: r.extract_job,
+              format: r.format
+            }
+          }
         )
-        content.resourceIDs = result.resources.map(r => r.id)
 
         return content
       })
     },
-    createDataset: function (context, dataset) {
-      dataset.owner_org = context.organization.id
-      dataset.private = true
 
-      if (context.url.origin === 'http://localhost:5000') {
-        if (dataset.name.endsWith('-test')) {
-          dataset.name = dataset.name.replace('-test', '')
-          dataset.title = dataset.title.replace(' Test', '')
-        } else {
-          dataset.name += '-test'
-          dataset.title += ' Test'
-        }
-      }
+    /**
+     * createDataset() creates package
+     *
+     * @param {Object} context - CKAN state object
+     * @param {Object} dataset - metadata of the dataset to be created
+     *
+     * @return {Object} created CKAN package
+     */
+    createDataset: function (context, dataset) {
+      // Update the dataset organization ID as the target organization ID
+      dataset.owner_org = context.organization.id
+
+      // Hide the dataset initially on create in case of failures
+      dataset.private = true
 
       return axios({
         method: 'post',
@@ -72,10 +128,20 @@ export default {
         response => response.data.result
       )
     },
-    createResource: function (context, resource) {
-      delete resource.id
 
+    /**
+     * createResource() creates FileStore resource
+     *
+     * @param {Object} context  - CKAN state object
+     * @param {Object} resource - metadata of the resource to be created
+     *
+     * @return {Object} created CKAN resource
+     */
+    createResource: function (context, resource) {
       resource.package_id = context.dataset.id
+
+      // Configure the FileStore content to be created by uploading the content
+      // of the resource URL field
       resource.url_type = 'upload'
 
       return axios({
@@ -87,14 +153,27 @@ export default {
         }
       })
     },
-    createDatastore: async function (local, remote, resource) {
-      let resourceID = resource.id
 
-      delete resource.id
+    /**
+     * createDatastore() creates DataStore resource
+     *
+     * @param {Object} local      - source CKAN state object
+     * @param {Object} remote     - target CKAN state object
+     * @param {Object} resourceID - ID of the source resource
+     * @param {Object} resource   - metadata of the resource to be created
+     *
+     * @return {Object} created CKAN resource
+     */
+    createDatastore: async function (local, remote, resourceID, resource) {
+      // Remove the resource URL since it will generate a CSV
+      // TODO: alternatively, we can use the original DataStore dump URL and
+      // create the records from the generated CSV but need to test if this will
+      // maintain the same data dictionary
       delete resource.url
 
       resource.package_id = remote.dataset.id
 
+      // Fetch the data dictionary and number of records from the source CKAN
       let { fields, total } = await axios({
         method: 'get',
         url: this.buildEndpoint(local, 'datastore_search'),
@@ -107,6 +186,8 @@ export default {
         response => response.data.result
       )
 
+      // Fetch all the data from the source ckan
+      // TODO: pagination
       let { records } = await axios({
         method: 'get',
         url: this.buildEndpoint(local, 'datastore_search'),
@@ -118,6 +199,7 @@ export default {
         response => response.data.result
       )
 
+      // Remove the auto-generated '_id' field from the records and fields
       for (let field of records) {
         delete field._id
       }
@@ -137,6 +219,12 @@ export default {
         }
       })
     },
+
+    /**
+     * publishDataset() sets package from private to public
+     *
+     * @param {Object} context - CKAN state object
+     */
     publishDataset: function (context) {
       axios({
         method: 'post',
@@ -150,7 +238,16 @@ export default {
         }
       })
     },
+
+    /**
+     * deleteDataset() deletes package
+     *
+     * @param {Object} context - CKAN state object
+     */
     deleteDataset: async function (context) {
+      // Delete the resources from the package one by one because CKAN doesn't
+      // remove datastore tables correctly when deleting from package level
+      // directly
       for (let rid of context.resourceIDs) {
         await axios({
           method: 'post',

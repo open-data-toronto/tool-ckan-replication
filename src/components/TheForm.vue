@@ -57,48 +57,61 @@ export default {
     ckan
   ],
   methods: {
+    // load() fetches package metadata from the source CKAN
     load: async function () {
       let content = await this.getDataset(this.local)
+
       for (let [key, value] of Object.entries(content)) {
         this.$set(this.local, key, value)
       }
     },
+
+    // replicate() creates the source package and resources in the target CKAN
     replicate: async function () {
-      // Update the local package organization ID with the remote organization ID
-      let remoteOrganization = await this.getOrganization(this.local)
-      this.$set(this.remote, 'organization', remoteOrganization)
+      try {
+        // Fetches the target organization
+        let remoteOrganization = await this.getOrganization(this.local)
+        this.$set(this.remote, 'organization', remoteOrganization)
 
-      // Replicate the local package in remote
-      let replicant = await this.createDataset(this.remote, this.local.dataset)
-      this.$set(this.remote, 'dataset', replicant)
+        // Replicate the source package in target
+        let replicant = await this.createDataset(this.remote, this.local.dataset)
+        this.$set(this.remote, 'dataset', replicant)
 
-      // Replicate the resources
-      for (let resource of this.local.resources) {
-        if (resource.datastore_active) {
-          await this.createDatastore(this.local, this.remote, resource)
-        } else {
-          await this.createResource(this.remote, resource)
+        // Replicate the resources
+        for (let [idx, resource] of this.local.resources.entries()) {
+          if (resource.datastore_active) {
+            await this.createDatastore(this.local, this.remote, this.local.resourceIDs[idx], resource)
+          } else {
+            await this.createResource(this.remote, resource)
+          }
         }
+
+        // Publish the created target package
+        await this.publishDataset(this.remote)
+
+        // Deletes the original source package
+        // TODO: what happens if function fails at this step?
+        await this.deleteDataset(this.local)
+      } catch {
+        await this.deleteDataset(this.remote)
       }
-
-      await this.publishDataset(this.remote)
-
-      await this.deleteDataset(this.local)
 
       return true
     },
+
+    // set() updates and validates the input variables
     set: function (value, loc, key) {
       let update = loc === 'local' ? this.local : this.remote
 
       this.state.error = null
       if (key === 'url') {
+        // Try to convert the input string to an URL
         try {
           this.$set(update, key, new URL(value))
 
+          // Validate the the source and target URLs are not the same
           if (this.remote.hasOwnProperty('url') && this.local.hasOwnProperty('url') && this.remote.url.origin === this.local.url.origin) {
-            if (this.remote.url.origin !== 'http://localhost:5000') {
-              this.state.error = this.errors.duplicate
-            }
+            this.state.error = this.errors.duplicate
           }
         } catch {
           this.state.error = this.errors.url
@@ -107,6 +120,8 @@ export default {
         this.$set(update, key, value)
       }
     },
+
+    // toggle() show/hides the validate metadata modal
     toggle: function () {
       if (!this.state.open) {
         if (!this.local.url || !this.local.key || !this.remote.url || !this.remote.key) {
@@ -114,7 +129,8 @@ export default {
         } else if (this.state.error === null) {
           this.state.open = true
 
-          // TODO: spin wheel while loading on the button before showing modal
+          // Reload the entire modal on every show since no validation on if
+          // source URL changed when hiden
           this.load()
         }
       } else {
@@ -124,8 +140,12 @@ export default {
   },
   data () {
     return {
+      // CKAN info and model metadata from the source
       local: {},
+
+      // CKAN info and model metadata created in the target
       remote: {},
+
       state: {
         open: false,
         error: null
