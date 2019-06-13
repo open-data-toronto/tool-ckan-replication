@@ -91,6 +91,7 @@ export default {
 
         // Deletes the original source package
         // TODO: what happens if function fails at this step?
+        // TODO: do not delete if moving from prod to staging
         await this.deleteDataset(this.local)
       } catch {
         await this.deleteDataset(this.remote)
