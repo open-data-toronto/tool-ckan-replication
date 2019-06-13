@@ -31,7 +31,7 @@ export default {
 
         content.dataset = (
           ({ name, title, notes, collection_method, excerpt, limitations, information_url, dataset_category, is_retired, refresh_rate, topics, owner_division, owner_section, owner_unit, owner_email, image_url }) =>
-          ({ name, title, notes, collection_method, excerpt, limitations, information_url, dataset_category, is_retired, refresh_rate, topics, owner_division, owner_section, owner_unit, owner_email, image_url })
+            ({ name, title, notes, collection_method, excerpt, limitations, information_url, dataset_category, is_retired, refresh_rate, topics, owner_division, owner_section, owner_unit, owner_email, image_url })
         )(result)
 
         content.datasetID = result.id
@@ -39,7 +39,7 @@ export default {
         content.resources = result.resources.map(
           r => (
             ({ id, name, description, datastore_active, url, extract_job, format }) =>
-            ({ id, name, description, datastore_active, url, extract_job, format })
+              ({ id, name, description, datastore_active, url, extract_job, format })
           )(r)
         )
         content.resourceIDs = result.resources.map(r => r.id)
@@ -66,7 +66,7 @@ export default {
         url: this.buildEndpoint(context, 'package_create'),
         data: dataset,
         headers: {
-          'Authorization' : context.key
+          'Authorization': context.key
         }
       }).then(
         response => response.data.result
@@ -83,7 +83,7 @@ export default {
         url: this.buildEndpoint(context, 'resource_create'),
         data: resource,
         headers: {
-          'Authorization' : context.key
+          'Authorization': context.key
         }
       })
     },
@@ -122,9 +122,9 @@ export default {
         delete field._id
       }
 
-      fields = fields.filter(row => row.id != '_id')
+      fields = fields.filter(row => row.id !== '_id')
 
-      return await axios({
+      return axios({
         method: 'post',
         url: this.buildEndpoint(remote, 'datastore_create'),
         data: {
@@ -133,7 +133,7 @@ export default {
           records: records
         },
         headers: {
-          'Authorization' : remote.key
+          'Authorization': remote.key
         }
       })
     },
