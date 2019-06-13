@@ -6,7 +6,7 @@
       </sui-table-row>
     </sui-table-header>
     <sui-table-body>
-      <sui-table-row v-for="(value, key) in data" :key="key">
+      <sui-table-row v-for="(value, key) in data" :key="key" v-show="key !== 'id' && key !== 'url'">
         <sui-table-cell>
           <sui-label>{{ key }}</sui-label>
         </sui-table-cell>

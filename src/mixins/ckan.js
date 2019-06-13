@@ -34,12 +34,15 @@ export default {
           ({ name, title, notes, collection_method, excerpt, limitations, information_url, dataset_category, is_retired, refresh_rate, topics, owner_division, owner_section, owner_unit, owner_email, image_url })
         )(result)
 
+        content.datasetID = result.id
+
         content.resources = result.resources.map(
           r => (
             ({ id, name, description, datastore_active, url, extract_job, format }) =>
             ({ id, name, description, datastore_active, url, extract_job, format })
           )(r)
         )
+        content.resourceIDs = result.resources.map(r => r.id)
 
         return content
       })
@@ -48,8 +51,15 @@ export default {
       dataset.owner_org = context.organization.id
       dataset.private = true
 
-      dataset.name += '-test'
-      dataset.owner_org = 'e1d223a3-f1bd-4933-b49e-24786cee2af3'
+      if (context.url.origin === 'http://localhost:5000') {
+        if (dataset.name.endsWith('-test')) {
+          dataset.name = dataset.name.replace('-test', '')
+          dataset.title = dataset.title.replace(' Test', '')
+        } else {
+          dataset.name += '-test'
+          dataset.title += ' Test'
+        }
+      }
 
       return axios({
         method: 'post',
@@ -141,21 +151,27 @@ export default {
       })
     },
     deleteDataset: async function (context) {
-      for (let resource of context.resources) {
+      for (let rid of context.resourceIDs) {
         await axios({
-          method: 'get',
+          method: 'post',
           url: this.buildEndpoint(context, 'resource_delete'),
-          params: {
-            id: resource.id
+          data: {
+            id: rid
+          },
+          headers: {
+            'Authorization': context.key
           }
         })
       }
 
       await axios({
-        method: 'get',
+        method: 'post',
         url: this.buildEndpoint(context, 'package_delete'),
-        params: {
-          id: context.package.id
+        data: {
+          id: context.datasetID
+        },
+        headers: {
+          'Authorization': context.key
         }
       })
     }
