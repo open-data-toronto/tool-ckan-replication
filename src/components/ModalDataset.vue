@@ -7,7 +7,7 @@
       label-position="right"
       @click="$emit('toggle')"/>
     <sui-modal v-model="open" v-bind:closable="false">
-      <sui-modal-header>{{ data !== null ? data.dataset.title : '' }}</sui-modal-header>
+      <sui-modal-header>{{ data.dataset !== undefined ? data.dataset.title : '' }}</sui-modal-header>
       <sui-modal-content scrolling>
         <sui-modal-description v-if="data !== null">
           <TableDisplay title="Organization" :data="data.organization"/>

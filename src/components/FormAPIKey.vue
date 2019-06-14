@@ -1,6 +1,6 @@
 <template>
   <sui-form-field required>
-    <label>Password</label>
+    <label>API Key</label>
     <sui-input
       type="password"
       icon="lock"
