@@ -1,17 +1,17 @@
 <template>
-  <sui-message negative v-show="show">
-    <sui-message-header>{{ title }}</sui-message-header>
-    <p>{{ message }}</i></p>
-  </sui-message>
+  <sui-grid-row centered>
+    <sui-message negative>
+      <sui-message-header>Errors</sui-message-header>
+      <li v-for="value in errors" :key="value.key" v-show="value.show">{{ value.title }}</li>
+    </sui-message>
+  </sui-grid-row>
 </template>
 
 <script>
 export default {
   name: 'ErrorMessage',
   props: {
-    title: String,
-    message: String,
-    show: Boolean
+    errors: Object
   }
 }
 </script>

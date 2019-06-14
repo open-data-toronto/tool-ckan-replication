@@ -7,8 +7,8 @@
             <sui-segment basic>
               <sui-header attached="top" textAlign="center">Origin</sui-header>
               <sui-segment attached="bottom">
-                <FormDataset :error="state.error !== null && (state.error.type === 'duplicate' || state.error.type === 'url')" @change="set"/>
-                <FormAPIKey location="local" @change="set"/>
+                <FormDataset :error="hasError" @change="set"/>
+                <FormAPIKey location="local" :error="errors.missing.show" @change="set"/>
               </sui-segment>
             </sui-segment>
           </sui-grid-column>
@@ -16,15 +16,13 @@
             <sui-segment basic>
               <sui-header attached="top" textAlign="center">Destination</sui-header>
               <sui-segment attached="bottom">
-                <FormInstance :error="state.error !== null && state.error.type === 'duplicate'" @change="set"/>
-                <FormAPIKey location="remote" @change="set"/>
+                <FormInstance :error="errors.duplicate.show || errors.missing.show" @change="set"/>
+                <FormAPIKey location="remote" :error="errors.missing.show" @change="set"/>
               </sui-segment>
             </sui-segment>
           </sui-grid-column>
         </sui-grid-row>
-        <sui-grid-row centered>
-          <ErrorMessage :title="state.error !== null ? state.error.title : ''" v-show="state.error !== null"/>
-        </sui-grid-row>
+        <ErrorMessage :errors="errors" v-show="hasError"/>
         <sui-grid-row centered>
           <ModalDataset :data="local" :open="state.open" @toggle="toggle" @submit="replicate"/>
         </sui-grid-row>
@@ -56,6 +54,17 @@ export default {
   mixins: [
     ckan
   ],
+  computed: {
+    hasError: function () {
+      for (let error of Object.values(this.errors)) {
+        if (error.show) {
+          return true
+        }
+      }
+
+      return false
+    }
+  },
   methods: {
     // load() fetches package metadata from the source CKAN
     load: async function () {
@@ -104,18 +113,30 @@ export default {
     set: function (value, loc, key) {
       let update = loc === 'local' ? this.local : this.remote
 
-      this.state.error = null
       if (key === 'url') {
         // Try to convert the input string to an URL
-        try {
-          this.$set(update, key, new URL(value))
+        if (loc === 'local') {
+          try {
+            this.$set(update, key, new URL(value))
 
-          // Validate the the source and target URLs are not the same
-          if (this.remote.hasOwnProperty('url') && this.local.hasOwnProperty('url') && this.remote.url.origin === this.local.url.origin) {
-            this.state.error = this.errors.duplicate
+            this.errors.url.show = false
+          } catch {
+            this.$set(update, key, '')
+
+            this.errors.url.show = true
           }
-        } catch {
-          this.state.error = this.errors.url
+
+          console.log(this.local.url)
+        } else {
+          this.$set(update, key, new URL(value))
+        }
+
+        console.log(this.remote.hasOwnProperty('url'), this.local.hasOwnProperty('url'))
+
+        // Validate the the source and target URLs are not the same
+        if (this.remote.hasOwnProperty('url') && this.local.hasOwnProperty('url')) {
+          console.log(this.remote.url.origin, this.local.url.origin)
+          this.errors.duplicate.show = this.remote.url.origin === this.local.url.origin
         }
       } else {
         this.$set(update, key, value)
@@ -125,9 +146,14 @@ export default {
     // toggle() show/hides the validate metadata modal
     toggle: function () {
       if (!this.state.open) {
-        if (!this.local.url || !this.local.key || !this.remote.url || !this.remote.key) {
-          this.state.error = this.errors.missing
-        } else if (this.state.error === null) {
+        this.errors.missing.show = (
+          !this.local.url ||
+          !this.local.key ||
+          !this.remote.url ||
+          !this.remote.key
+        )
+
+        if (!this.hasError) {
           this.state.open = true
 
           // Reload the entire modal on every show since no validation on if
@@ -154,15 +180,18 @@ export default {
       errors: {
         duplicate: {
           key: 'duplicate',
-          title: 'Origin and destination CKAN instances can not be the same'
+          title: 'Origin and destination CKAN instances can not be the same',
+          show: false
         },
         missing: {
           key: 'missing',
-          title: 'Please fill in all required fields'
+          title: 'Please fill in all required fields',
+          show: false
         },
         url: {
           key: 'url',
-          title: 'Package is not from a valid CKAN URL'
+          title: 'Package is not from a valid CKAN URL',
+          show: false
         }
       }
     }
