@@ -16,6 +16,11 @@ export default {
   props: {
     location: String,
     error: Boolean
+  },
+  data () {
+    return {
+      value: ''
+    }
   }
 }
 </script>

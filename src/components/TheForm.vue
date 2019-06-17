@@ -8,23 +8,37 @@
               <sui-header attached="top" textAlign="center">Origin</sui-header>
               <sui-segment attached="bottom">
                 <FormDataset :error="hasError" @change="set"/>
-                <FormAPIKey location="local" :error="errors.missing.show" @change="set"/>
+                <FormAPIKey
+                  location="local"
+                  :error="errors.missing.show"
+                  @change="set"/>
               </sui-segment>
             </sui-segment>
           </sui-grid-column>
           <sui-grid-column>
             <sui-segment basic>
-              <sui-header attached="top" textAlign="center">Destination</sui-header>
+              <sui-header attached="top" textAlign="center">
+                Destination
+              </sui-header>
               <sui-segment attached="bottom">
-                <FormInstance :error="errors.duplicate.show || errors.missing.show" @change="set"/>
-                <FormAPIKey location="remote" :error="errors.missing.show" @change="set"/>
+                <FormInstance
+                  :error="errors.duplicate.show || errors.missing.show"
+                  @change="set"/>
+                <FormAPIKey
+                  location="remote"
+                  :error="errors.missing.show"
+                  @change="set"/>
               </sui-segment>
             </sui-segment>
           </sui-grid-column>
         </sui-grid-row>
         <ErrorMessage :errors="errors" v-show="hasError"/>
         <sui-grid-row centered>
-          <ModalDataset :data="local" :open="state.open" @toggle="toggle" @submit="replicate"/>
+          <ModalDataset
+            :data="local"
+            :open="state.open"
+            @toggle="toggle"
+            @submit="replicate"/>
         </sui-grid-row>
       </sui-grid>
     </sui-form>
@@ -66,12 +80,21 @@ export default {
     }
   },
   methods: {
-    // load() fetches package metadata from the source CKAN
+    // load() fetches package metadata from the source CKAN and checks if the
+    // package exists in remote CKAN
     load: async function () {
-      let content = await this.getDataset(this.local)
+      let { content, origin } = await this.getDataset(
+        this.local,
+        this.remote,
+        this.local.url.pathname.split('/')[2]
+      )
 
       for (let [key, value] of Object.entries(content)) {
         this.$set(this.local, key, value)
+      }
+
+      for (let [key, value] of Object.entries(origin)) {
+        this.$set(this.remote, key, value)
       }
     },
 
@@ -83,13 +106,21 @@ export default {
         this.$set(this.remote, 'organization', remoteOrganization)
 
         // Replicate the source package in target
-        let replicant = await this.createDataset(this.remote, this.local.dataset)
+        let replicant = await this.createDataset(
+          this.remote,
+          this.local.dataset
+        )
         this.$set(this.remote, 'dataset', replicant)
 
         // Replicate the resources
         for (let [idx, resource] of this.local.resources.entries()) {
           if (resource.datastore_active) {
-            await this.createDatastore(this.local, this.remote, this.local.resourceIDs[idx], resource)
+            await this.createDatastore(
+              this.local,
+              this.remote,
+              this.local.resourceIDs[idx],
+              resource
+            )
           } else {
             await this.createResource(this.remote, resource)
           }
@@ -125,18 +156,17 @@ export default {
 
             this.errors.url.show = true
           }
-
-          console.log(this.local.url)
         } else {
           this.$set(update, key, new URL(value))
         }
 
-        console.log(this.remote.hasOwnProperty('url'), this.local.hasOwnProperty('url'))
-
         // Validate the the source and target URLs are not the same
-        if (this.remote.hasOwnProperty('url') && this.local.hasOwnProperty('url')) {
-          console.log(this.remote.url.origin, this.local.url.origin)
-          this.errors.duplicate.show = this.remote.url.origin === this.local.url.origin
+        if (
+          this.remote.hasOwnProperty('url') &&
+          this.local.hasOwnProperty('url')
+        ) {
+          this.errors.duplicate.show =
+            this.remote.url.origin === this.local.url.origin
         }
       } else {
         this.$set(update, key, value)
