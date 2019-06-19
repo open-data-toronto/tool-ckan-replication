@@ -14,7 +14,7 @@
           {{ value }}
         </sui-table-cell>
         <sui-table-cell v-show="columns === 3">
-          {{ secondary[key] if columns === 3 else '' }}
+          {{ columns === 3 ? secondary[key] : '' }}
         </sui-table-cell>
       </sui-table-row>
     </sui-table-body>
@@ -28,7 +28,7 @@ export default {
     columns: function () {
       return Object.keys(original).length === 0  ? 2 : 3
     }
-  }
+  },
   props: {
     title: String,
     content: Object,

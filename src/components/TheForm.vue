@@ -7,10 +7,21 @@
             <sui-segment basic>
               <sui-header attached="top" textAlign="center">Origin</sui-header>
               <sui-segment attached="bottom">
-                <FormDataset :error="hasError" @change="set"/>
-                <FormAPIKey
-                  location="local"
+                <FormInput
+                  title="Package URL"
+                  placeholder="https://ckanadmin.prod-toronto.ca/dataset/permit"
+                  icon="linkify"
+                  :error="hasError"
+                  @change="set"/>
+                <FormSecret
+                  title="API Key"
+                  name="local"
                   :error="errors.missing.show"
+                  @change="set"/>
+                <FormToggle
+                  title="Remove on Complete?"
+                  name="purge"
+                  :default="this.state.purge"
                   @change="set"/>
               </sui-segment>
             </sui-segment>
@@ -21,12 +32,20 @@
                 Destination
               </sui-header>
               <sui-segment attached="bottom">
-                <FormInstance
+                <FormDropdown
+                  title="CKAN Instance"
+                  :options="instances"
                   :error="errors.duplicate.show || errors.missing.show"
                   @change="set"/>
-                <FormAPIKey
-                  location="remote"
+                <FormSecret
+                  title="API Key"
+                  name="remote"
                   :error="errors.missing.show"
+                  @change="set"/>
+                <FormToggle
+                  title="Keep Private?"
+                  name="secret"
+                  :default="this.state.secret"
                   @change="set"/>
               </sui-segment>
             </sui-segment>
@@ -46,9 +65,10 @@
 </template>
 
 <script>
-import FormAPIKey from '@/components/FormAPIKey.vue'
-import FormDataset from '@/components/FormDataset.vue'
-import FormInstance from '@/components/FormInstance.vue'
+import FormSecret from '@/components/FormSecret.vue'
+import FormInput from '@/components/FormInput.vue'
+import FormDropdown from '@/components/FormDropdown.vue'
+import FormToggle from '@/components/FormToggle.vue'
 
 import ErrorMessage from '@/components/ErrorMessage.vue'
 
@@ -59,9 +79,10 @@ import ckan from '@/mixins/ckan.js'
 export default {
   name: 'TheForm',
   components: {
-    FormAPIKey,
-    FormDataset,
-    FormInstance,
+    FormSecret,
+    FormInput,
+    FormDropdown,
+    FormToggle,
     ErrorMessage,
     ModalDataset
   },
@@ -166,6 +187,7 @@ export default {
 
     // set() updates and validates the input variables
     set: function (value, loc, key) {
+      console.log(value, loc, key)
       let update = loc === 'local' ? this.local : this.remote
 
       if (key === 'url') {
@@ -219,6 +241,7 @@ export default {
       }
     }
   },
+
   data () {
     return {
       // CKAN info and model metadata from the source
@@ -231,10 +254,17 @@ export default {
       delta: {},
 
       state: {
-        create: true,
-        error: null,
-        open: false
+        create: true, // track if package needs to be create in remote CKAN
+        error: null, // track error state
+        open: false, // track if modal is open
+        purge: true, // track if package should be cleaned up from local CKAN
+        secret: false // track if remote package created should be kept private
       },
+      instances: [
+        { text: 'Development', value: 'http://localhost:5000' },
+        { text: 'Staging', value: 'https://ckanadmin0.intra.qa-toronto.ca' },
+        { text: 'Production', value: 'https://ckanadmin.intra.prod-toronto.ca' }
+      ],
       errors: {
         duplicate: {
           key: 'duplicate',

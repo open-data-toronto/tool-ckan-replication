@@ -1,12 +1,12 @@
 <template>
   <sui-form-field required v-bind:class="{ error: error }">
-    <label>API Key</label>
+    <label>{{ title }}</label>
     <sui-input
       type="password"
       icon="lock"
       iconPosition="left"
       v-model="value"
-      @change="$emit('change', $event.target.value, location, 'key')"/>
+      @change="$emit('change', $event.target.value, name, 'key')"/>
   </sui-form-field>
 </template>
 
@@ -14,7 +14,8 @@
 export default {
   name: 'FormAPIKey',
   props: {
-    location: String,
+    title: String,
+    name: String,
     error: Boolean
   },
   data () {

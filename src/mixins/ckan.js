@@ -86,13 +86,15 @@ export default {
         }
 
         content.resources = result.resources.map(
-          r => {
-            name: r.name,
-            description: r.description,
-            datastore_active: r.datastore_active,
-            url: r.url,
-            extract_job: r.extract_job,
-            format: r.format
+          r => function() {
+            return {
+              name: r.name,
+              description: r.description,
+              datastore_active: r.datastore_active,
+              url: r.url,
+              extract_job: r.extract_job,
+              format: r.format
+            }
           }
         )
 

@@ -10,10 +10,10 @@
       v-model="open"
       v-bind:closable="false">
       <sui-modal-header>
-        {{ content.dataset !== undefined ? content.dataset.title : '' }}
+        {{ content !== undefined && content.dataset !== undefined ? content.dataset.title : '' }}
       </sui-modal-header>
       <sui-modal-content scrolling>
-        <sui-modal-description v-if="content !== null">
+        <sui-modal-description v-if="content !== undefined">
           <TableDisplay
             title="Organization"
             :content="content.organization"/>

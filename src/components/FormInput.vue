@@ -1,9 +1,9 @@
 <template>
   <sui-form-field required v-bind:class="{ error: error }">
-    <label>Package URL</label>
+    <label>{{ title }}</label>
     <sui-input
-      placeholder="https://ckanadmin.prod-toronto.ca/dataset/hello-world"
-      icon="linkify"
+      :placeholder="placeholder"
+      :icon="icon"
       iconPosition="left"
       v-model="value"
       @change="$emit('change', $event.target.value, 'local', 'url')"/>
@@ -14,8 +14,11 @@
 import ErrorMessage from '@/components/ErrorMessage.vue'
 
 export default {
-  name: 'FormDataset',
+  name: 'FormInput',
   props: {
+    title: String,
+    placeholder: String,
+    icon: String,
     error: Boolean
   },
   data () {
