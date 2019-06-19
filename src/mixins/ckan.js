@@ -15,13 +15,33 @@ export default {
     },
 
     /**
-     * parseDataset() organizes the package metadata
+     * getOrganization() fetches the organization metadata
+     *
+     * @param {Object} context - CKAN state object
+     *
+     * @return {Object} CKAN organization
+     */
+    getOrganization: function (context) {
+      return axios({
+        method: 'get',
+        url: this.buildEndpoint(context, 'organization_show'),
+        params: {
+          // Matches organization by name (instead of ID)
+          id: context.organization.name
+        }
+      }).then(
+        response => response.data.result
+      )
+    },
+
+    /**
+     * getDataset() organizes the package metadata
      *
      * @params {Object} response - response from pacakge_show request
      *
      * @return {Object} CKAN package with unneeded fields removed
      */
-    parseDataset: function (context, datasetID) {
+    getDataset: function (context, datasetID) {
       return axios({
         method: 'get',
         url: this.buildEndpoint(context, 'package_show'),
@@ -67,14 +87,12 @@ export default {
 
         content.resources = result.resources.map(
           r => {
-            return {
-              name: r.name,
-              description: r.description,
-              datastore_active: r.datastore_active,
-              url: r.url,
-              extract_job: r.extract_job,
-              format: r.format
-            }
+            name: r.name,
+            description: r.description,
+            datastore_active: r.datastore_active,
+            url: r.url,
+            extract_job: r.extract_job,
+            format: r.format
           }
         )
 
@@ -82,41 +100,6 @@ export default {
       }).catch(e => {
         return null
       })
-    },
-
-    /**
-     * getOrganization() fetches the organization metadata
-     *
-     * @param {Object} context - CKAN state object
-     *
-     * @return {Object} CKAN organization
-     */
-    getOrganization: function (context) {
-      return axios({
-        method: 'get',
-        url: this.buildEndpoint(context, 'organization_show'),
-        params: {
-          // Matches organization by name (instead of ID)
-          id: context.organization.name
-        }
-      }).then(
-        response => response.data.result
-      )
-    },
-
-    /**
-     * getDataset() fetches the package metadata
-     *
-     * @param {Object} local  - source CKAN state object
-     * @param {Object} remote - target CKAN state object
-     *
-     * @return {Object} CKAN package
-     */
-    getDataset: async function (local, remote, datasetID) {
-      return {
-        content: await this.parseDataset(local, datasetID),
-        origin: await this.parseDataset(remote, datasetID)
-      }
     },
 
     /**

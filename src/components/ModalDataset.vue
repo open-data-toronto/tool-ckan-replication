@@ -6,13 +6,26 @@
       icon="right arrow"
       label-position="right"
       @click="$emit('toggle')"/>
-    <sui-modal v-model="open" v-bind:closable="false">
-      <sui-modal-header>{{ data.dataset !== undefined ? data.dataset.title : '' }}</sui-modal-header>
+    <sui-modal
+      v-model="open"
+      v-bind:closable="false">
+      <sui-modal-header>
+        {{ content.dataset !== undefined ? content.dataset.title : '' }}
+      </sui-modal-header>
       <sui-modal-content scrolling>
-        <sui-modal-description v-if="data !== null">
-          <TableDisplay title="Organization" :data="data.organization"/>
-          <TableDisplay title="Dataset" :data="data.dataset"/>
-          <TableDisplay title="Resource" v-for="resource in data.resources" :key="resource.name" :data="resource"/>
+        <sui-modal-description v-if="content !== null">
+          <TableDisplay
+            title="Organization"
+            :content="content.organization"/>
+          <TableDisplay
+            title="Dataset"
+            :content="content.dataset"/>
+          <!-- TODO: Display resources correctly -->
+          <TableDisplay
+            title="Resource"
+            v-for="resource in content.resources"
+            :key="resource.name"
+            :content="resource"/>
         </sui-modal-description>
       </sui-modal-content>
       <sui-modal-actions>
@@ -32,7 +45,7 @@ export default {
     TableDisplay
   },
   props: {
-    data: Object,
+    content: Object,
     open: Boolean
   }
 }

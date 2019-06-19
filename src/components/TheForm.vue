@@ -83,18 +83,42 @@ export default {
     // load() fetches package metadata from the source CKAN and checks if the
     // package exists in remote CKAN
     load: async function () {
-      let { content, origin } = await this.getDataset(
-        this.local,
-        this.remote,
-        this.local.url.pathname.split('/')[2]
-      )
+      let dID = this.local.url.pathname.split('/')[2]
 
-      for (let [key, value] of Object.entries(content)) {
+      let content = await this.getDataset(this.local, dID)
+      for (let [key, value] of content.entries()) {
         this.$set(this.local, key, value)
       }
 
-      for (let [key, value] of Object.entries(origin)) {
+      let original = await this.getDataset(this.remote, dID)
+      for (let [key, value] of original.entries()) {
         this.$set(this.remote, key, value)
+      }
+
+      // Validate if original is an empty object and exist in target CKAN
+      if (Object.keys(original).length !== 0) {
+        this.$set(this.state, create, false)
+        this.$set(this.delta, this.findDifference(content, original))
+
+        let cResourceMap = convertMap(content.resources, 'name')
+        let oResourceMap = convertMap(original.resources, 'name')
+
+        let resourceDelta = {}
+        for (let r of cResourceMap) {
+          if (!oResourceMap.hasOwnProperty(r.name)) {
+            resourceDelta[r.name] = 'insert'
+          } else {
+            resourceDelta[r.name] = this.findDifference(cResourceMap[r.name], oResourceMap[r.name])
+          }
+        }
+
+        for (let r of oResourceMap) {
+          if (!a.hasOwnProperty(r.name)) {
+            resourceDelta[r.name] = 'delete'
+          }
+        }
+
+        this.$set(this.delta, 'resources', resourceDelta)
       }
     },
 
@@ -130,9 +154,9 @@ export default {
         await this.publishDataset(this.remote)
 
         // Deletes the original source package
-        // TODO: what happens if function fails at this step?
-        // TODO: do not delete if moving from prod to staging
-        await this.deleteDataset(this.local)
+        if (this.local.url.origin !== 'https://ckanadmin.prod-toronto.ca') {
+          await this.deleteDataset(this.local)
+        }
       } catch {
         await this.deleteDataset(this.remote)
       }
@@ -203,9 +227,13 @@ export default {
       // CKAN info and model metadata created in the target
       remote: {},
 
+      // object tracking changes between local and remote CKAN instances
+      delta: {},
+
       state: {
-        open: false,
-        error: null
+        create: true,
+        error: null,
+        open: false
       },
       errors: {
         duplicate: {
