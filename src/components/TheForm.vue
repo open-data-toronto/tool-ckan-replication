@@ -172,10 +172,15 @@ export default {
         }
 
         // Publish the created target package
-        await this.publishDataset(this.remote)
+        if (!this.state.secret) {
+          await this.publishDataset(this.remote)
+        }
 
         // Deletes the original source package
-        if (this.local.url.origin !== 'https://ckanadmin.prod-toronto.ca') {
+        if (
+          this.local.url.origin !== 'https://ckanadmin.prod-toronto.ca' ||
+          !this.state.purge
+        ) {
           await this.deleteDataset(this.local)
         }
       } catch {
@@ -260,11 +265,13 @@ export default {
         purge: true, // track if package should be cleaned up from local CKAN
         secret: false // track if remote package created should be kept private
       },
+
       instances: [
         { text: 'Development', value: 'http://localhost:5000' },
         { text: 'Staging', value: 'https://ckanadmin0.intra.qa-toronto.ca' },
         { text: 'Production', value: 'https://ckanadmin.intra.prod-toronto.ca' }
       ],
+
       errors: {
         duplicate: {
           key: 'duplicate',
