@@ -54,7 +54,8 @@
         <ErrorMessage :errors="errors" v-show="hasError"/>
         <sui-grid-row centered>
           <ModalDataset
-            :open="state.open"
+            :open="state.validating"
+            :dim="state.loading"
             :content="local"
             :title="this.state.mode == 'create'
               ? 'New Dataset' : 'Update Dataset'"
@@ -131,6 +132,8 @@ export default {
 
     // replicate() creates the source package and resources in the target CKAN
     replicate: async function () {
+      this.$set(this.state, 'loading', true)
+
       try {
         let remoteDataset = await this.touchDataset(
           this.state.mode,
@@ -171,6 +174,8 @@ export default {
           await this.deleteDataset(this.remote)
         }
       }
+
+      this.$set(this.state, 'loading', false)
     },
 
     // set() updates and validates the input variables
@@ -208,7 +213,7 @@ export default {
 
     // toggle() show/hides the validate metadata modal
     toggle: function () {
-      if (!this.state.open) {
+      if (!this.state.validating) {
         this.errors.missing.show = (
           !this.local.url ||
           !this.local.key ||
@@ -217,14 +222,14 @@ export default {
         )
 
         if (!this.hasError) {
-          this.state.open = true
+          this.state.validating = true
 
           // Reload the entire modal on every show since no validation on if
           // source URL changed when hiden
           this.load()
         }
       } else {
-        this.state.open = false
+        this.state.validating = false
       }
     }
   },
@@ -245,7 +250,8 @@ export default {
       state: {
         mode: 'create', // track if package needs to be create in remote CKAN
         error: null, // track error state
-        open: false, // track if modal is open
+        loading: false, // track if loading content to CKAN
+        validating: false, // track if modal is open
         purge: true, // track if package should be cleaned up from local CKAN
         secret: false // track if remote package created should be kept private
       },

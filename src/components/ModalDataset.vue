@@ -1,5 +1,6 @@
 <template lang="html">
   <div>
+    <sui-dimmer :active="dim"/>
     <sui-button basic
       type="button"
       content="Show Data"
@@ -46,9 +47,10 @@ export default {
     TableDisplay
   },
   props: {
+    title: String,
     content: Object,
-    open: Boolean,
-    title: String
+    dim: Boolean,
+    open: Boolean
   }
 }
 </script>
