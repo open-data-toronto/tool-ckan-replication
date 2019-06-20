@@ -115,7 +115,7 @@ export default {
       let remoteOrganization = await this.getOrganization(this.local)
       this.$set(this.remote, 'organization', remoteOrganization)
 
-      if (true || this.remote.url === this.instances[2].value) {
+      if (this.remote.url === this.instances[2].value) {
         // let remoteDataset = await this.getDataset(this.remote, dID)
         let remoteDataset = await this.getDataset(this.remote, 'example-geospatial-points-data')
         this.remote = Object.assign(remoteDataset, this.remote)
@@ -140,8 +140,7 @@ export default {
         this.$set(this.remote, 'dataset', remoteDataset)
 
         let remoteResources = this.remote.resources.map(r => r.name)
-
-        for (let [idx, resource] of this.local.resources.entries()) {
+        for (let resource of this.local.resources) {
           if (resource.datastore_active) {
             await this.touchDatastore(this.local, this.remote, resource)
           } else {
@@ -195,13 +194,13 @@ export default {
         }
 
         // Validate the the source and target URLs are not the same
-        // if (
-        //   this.remote.hasOwnProperty('url') &&
-        //   this.local.hasOwnProperty('url')
-        // ) {
-        //   this.errors.duplicate.show =
-        //     this.remote.url.origin === this.local.url.origin
-        // }
+        if (
+          this.remote.hasOwnProperty('url') &&
+          this.local.hasOwnProperty('url')
+        ) {
+          this.errors.duplicate.show =
+            this.remote.url.origin === this.local.url.origin
+        }
       } else {
         this.$set(update, key, value)
       }

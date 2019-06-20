@@ -216,7 +216,7 @@ export default {
         formData.append('package_id', remote.dataset.id)
       } else {
         method = 'resource_update'
-        formData.append('id', content.id)
+        formData.append('id', remoteResource[0].id)
       }
 
       return axios({
