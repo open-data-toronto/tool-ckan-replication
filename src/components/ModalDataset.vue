@@ -1,6 +1,8 @@
 <template lang="html">
   <div>
-    <sui-dimmer :active="dim"/>
+    <sui-dimmer :active="dim">
+      <sui-loader>{{ progress }}</sui-loader>
+    </sui-dimmer>
     <sui-button basic
       type="button"
       content="Show Data"

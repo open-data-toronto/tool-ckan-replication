@@ -132,16 +132,20 @@ export default {
 
     // replicate() creates the source package and resources in the target CKAN
     replicate: async function () {
+      let verb = this.state.mode === 'create' ? 'Creating' : 'Updating'
       this.$set(this.state, 'loading', true)
 
+      let remoteDataset
       try {
-        let remoteDataset = await this.touchDataset(
+        this.$set(this.state, 'progress', `${verb} dataset`)
+        remoteDataset = await this.touchDataset(
           this.state.mode,
           this.remote,
           this.local.dataset
         )
         this.$set(this.remote, 'dataset', remoteDataset)
 
+        this.$set(this.state, 'progress', `${verb} resources`)
         let remoteResources = this.remote.resources.map(r => r.name)
         for (let resource of this.local.resources) {
           if (resource.datastore_active) {
@@ -161,20 +165,29 @@ export default {
 
         // Publish the created target package
         if (!this.state.secret) {
+          this.$set(this.state, 'progress', 'Setting dataset as public')
           await this.publishDataset(this.remote)
         }
 
         // Deletes the original source package
         if (this.state.mode === 'create' && this.state.purge) {
+          this.$set(this.state, 'progress', 'Deleting original dataset')
           await this.deleteDataset(this.local)
         }
       } catch {
         // Rollback on update should be different
+        this.$set(this.state, 'progress', 'Rolling back changes')
         if (this.state.mode === 'create') {
           await this.deleteDataset(this.remote)
         }
+      } finally {
+        window.open(
+          `${this.remote.url.origin}/dataset/${remoteDataset.name}`,
+          '_blank'
+        )
       }
 
+      this.$set(this.state, 'progress', '')
       this.$set(this.state, 'loading', false)
     },
 
@@ -249,6 +262,7 @@ export default {
 
       state: {
         mode: 'create', // track if package needs to be create in remote CKAN
+        progress: '', // track loading progress
         error: null, // track error state
         loading: false, // track if loading content to CKAN
         validating: false, // track if modal is open
