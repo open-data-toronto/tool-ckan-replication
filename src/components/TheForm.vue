@@ -54,8 +54,10 @@
         <ErrorMessage :errors="errors" v-show="hasError"/>
         <sui-grid-row centered>
           <ModalDataset
-            :data="local"
             :open="state.open"
+            :content="local"
+            :title="this.state.mode == 'create'
+              ? 'New Dataset' : 'Update Dataset'"
             @toggle="toggle"
             @submit="replicate"/>
         </sui-grid-row>
@@ -86,9 +88,7 @@ export default {
     ErrorMessage,
     ModalDataset
   },
-  mixins: [
-    ckan
-  ],
+  mixins: [ ckan ],
   computed: {
     hasError: function () {
       for (let error of Object.values(this.errors)) {
@@ -112,52 +112,48 @@ export default {
       )
 
       // Fetches the target organization
-      this.$set(
-        this.remote,
-        'organization',
-        await this.getOrganization(this.local)
-      )
+      let remoteOrganization = await this.getOrganization(this.local)
+      this.$set(this.remote, 'organization', remoteOrganization)
 
-      if (this.remote.url === this.instances[2].value) {
-        this.remote = Object.assign(
-          // await this.getDataset(this.remote, dID),
-          await this.getDataset(this.remote, 'example-geospatial-points-data'),
-          this.remote
-        )
+      if (true || this.remote.url === this.instances[2].value) {
+        // let remoteDataset = await this.getDataset(this.remote, dID)
+        let remoteDataset = await this.getDataset(this.remote, 'example-geospatial-points-data')
+        this.remote = Object.assign(remoteDataset, this.remote)
 
         this.$set(
           this.state,
           'mode',
-          this.remote !== null &&
-            this.remote.hasOwnProperty('dataset') ? 'update' : 'create'
+          (this.remote !== null && this.remote.hasOwnProperty('dataset'))
+            ? 'update' : 'create'
         )
       }
     },
 
     // replicate() creates the source package and resources in the target CKAN
     replicate: async function () {
-      if (this.state.mode === 'create') {
-        this.create()
-      } else {
-        this.update()
-      }
-    },
-
-    create: async function () {
       try {
-        // Replicate the source package in target
-        let replicant = await this.createDataset(
+        let remoteDataset = await this.touchDataset(
+          this.state.mode,
           this.remote,
           this.local.dataset
         )
-        this.$set(this.remote, 'dataset', replicant)
+        this.$set(this.remote, 'dataset', remoteDataset)
 
-        // Replicate the resources
-        for (let resource of this.local.resources) {
+        let remoteResources = this.remote.resources.map(r => r.name)
+
+        for (let [idx, resource] of this.local.resources.entries()) {
           if (resource.datastore_active) {
-            await this.createDatastore(this.local, this.remote, resource)
+            await this.touchDatastore(this.local, this.remote, resource)
           } else {
-            await this.createResource(this.remote, resource)
+            await this.touchResource(this.local, this.remote, resource)
+          }
+
+          remoteResources.pop(resource.name)
+        }
+
+        for (let resource of this.remote.resources) {
+          if (remoteResources.indexOf(resource.name)) {
+            await this.deleteResource(this.remote, resource.id)
           }
         }
 
@@ -167,52 +163,14 @@ export default {
         }
 
         // Deletes the original source package
-        if (
-          this.local.url.origin !== this.instances[2].values ||
-          !this.state.purge
-        ) {
+        if (this.state.mode === 'create' && this.state.purge) {
           await this.deleteDataset(this.local)
         }
       } catch {
-        await this.deleteDataset(this.remote)
-      }
-    },
-
-    update: async function () {
-      let replicant = await this.updateDataset(
-        this.remote,
-        this.local.dataset
-      )
-      this.$set(this.remote, 'dataset', replicant)
-
-      let remoteResources = this.remote.resources.map(r => r.name)
-
-      for (let [idx, resource] of this.local.resources.entries()) {
-        if (remoteResources.indexOf(resource.name) !== -1) {
-          if (resource.datastore_active) {
-            await this.updateDatastore(this.local, this.remote, resource)
-          } else {
-            await this.updateResource(this.local, this.remote, idx)
-          }
-        } else {
-          if (resource.datastore_active) {
-            await this.createDatastore(this.local, this.remote, resource)
-          } else {
-            await this.createResource(this.remote, resource)
-          }
+        // Rollback on update should be different
+        if (this.state.mode === 'create') {
+          await this.deleteDataset(this.remote)
         }
-
-        remoteResources.pop(resource.name)
-      }
-
-      for (let resource of this.remote.resources) {
-        if (remoteResources.indexOf(resource.name)) {
-          await this.deleteResource(this.remote, resource.id)
-        }
-      }
-
-      if (!this.state.purge) {
-        await this.deleteDataset(this.local)
       }
     },
 
@@ -237,13 +195,13 @@ export default {
         }
 
         // Validate the the source and target URLs are not the same
-        if (
-          this.remote.hasOwnProperty('url') &&
-          this.local.hasOwnProperty('url')
-        ) {
-          this.errors.duplicate.show =
-            this.remote.url.origin === this.local.url.origin
-        }
+        // if (
+        //   this.remote.hasOwnProperty('url') &&
+        //   this.local.hasOwnProperty('url')
+        // ) {
+        //   this.errors.duplicate.show =
+        //     this.remote.url.origin === this.local.url.origin
+        // }
       } else {
         this.$set(update, key, value)
       }
@@ -260,7 +218,6 @@ export default {
         )
 
         if (!this.hasError) {
-        // if (true) {
           this.state.open = true
 
           // Reload the entire modal on every show since no validation on if

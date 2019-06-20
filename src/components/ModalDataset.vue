@@ -8,29 +8,30 @@
       @click="$emit('toggle')"/>
     <sui-modal
       v-model="open"
-      v-bind:closable="false">
+      v-bind:closable="false"
+      v-if="content.dataset !== undefined">
       <sui-modal-header>
-        {{ content !== undefined && content.dataset !== undefined ? content.dataset.title : '' }}
+        {{ title }}
       </sui-modal-header>
       <sui-modal-content scrolling>
-        <sui-modal-description v-if="content !== undefined">
+        <sui-modal-description>
           <TableDisplay
-            title="Organization"
-            :content="content.organization"/>
-          <TableDisplay
-            title="Dataset"
+            :title="content.dataset.title"
             :content="content.dataset"/>
-          <!-- TODO: Display resources correctly -->
           <TableDisplay
-            title="Resource"
+            :title="resource.name"
             v-for="resource in content.resources"
             :key="resource.name"
             :content="resource"/>
         </sui-modal-description>
       </sui-modal-content>
       <sui-modal-actions>
-        <sui-button type="button" negative @click="$emit('toggle')">Cancel</sui-button>
-        <sui-button type="button" primary @click="$emit('submit')">Submit</sui-button>
+        <sui-button type="button" negative @click="$emit('toggle')">
+          Cancel
+        </sui-button>
+        <sui-button type="button" primary @click="$emit('submit')">
+          Submit
+        </sui-button>
       </sui-modal-actions>
     </sui-modal>
   </div>
@@ -46,7 +47,8 @@ export default {
   },
   props: {
     content: Object,
-    open: Boolean
+    open: Boolean,
+    title: String
   }
 }
 </script>

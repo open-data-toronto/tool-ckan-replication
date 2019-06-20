@@ -3,15 +3,22 @@ const axios = require('axios')
 export default {
   methods: {
     /**
-     * buildEndpoint() creates the CKAN API URL
+     * publishDataset() sets package from private to public
      *
-     * @param {Object} context  - CKAN state object
-     * @param {String} endpoint - endpoint name
-     *
-     * @return {String} URL for the API endpoint
+     * @param {Object} context - CKAN state object
      */
-    buildEndpoint: function (context, endpoint) {
-      return context.url.origin + '/api/3/action/' + endpoint
+    publishDataset: function (context) {
+      axios({
+        method: 'post',
+        url: `${context.url.origin}/api/3/action/package_patch`,
+        data: {
+          id: context.dataset.id,
+          private: false
+        },
+        headers: {
+          'Authorization': context.key
+        }
+      })
     },
 
     /**
@@ -24,7 +31,7 @@ export default {
     getOrganization: function (context) {
       return axios({
         method: 'get',
-        url: this.buildEndpoint(context, 'organization_show'),
+        url: `${context.url.origin}/api/3/action/organization_show`,
         params: {
           // Matches organization by name (instead of ID)
           id: context.organization.name
@@ -44,7 +51,7 @@ export default {
     getDataset: function (context, datasetID) {
       return axios({
         method: 'get',
-        url: this.buildEndpoint(context, 'package_show'),
+        url: `${context.url.origin}/api/3/action/package_show`,
         params: {
           // Parse out the package name assuming that the URL is the path to the
           // dataset (eg. <protocol>://<host>/dataset/<package-name>)
@@ -106,7 +113,7 @@ export default {
     getDatastore: async function (context, resourceID) {
       let { fields, total } = await axios({
         method: 'get',
-        url: this.buildEndpoint(context, 'datastore_search'),
+        url: `${context.url.origin}/api/3/action/datastore_search`,
         params: {
           resource_id: resourceID,
           limit: 0,
@@ -118,7 +125,7 @@ export default {
 
       let { records } = await axios({
         method: 'get',
-        url: this.buildEndpoint(context, 'datastore_search'),
+        url: `${context.url.origin}/api/3/action/datastore_search`,
         params: {
           resource_id: resourceID,
           limit: total
@@ -139,25 +146,29 @@ export default {
     },
 
     /**
-     * createDataset() creates package
+     * touchDataset() creates package
      *
      * @param {Object} context - CKAN state object
      * @param {Object} dataset - metadata of the dataset to be created
+     * @param {String} how     - create or update the dataset
      *
      * @return {Object} created CKAN package
      */
-    createDataset: function (context, dataset) {
-      delete dataset.id
+    touchDataset: function (how, context, dataset) {
+      let method = how === 'create' ? 'package_create' : 'package_update'
 
-      // Update the dataset organization ID as the target organization ID
+      if (how === 'create') {
+        delete dataset.id
+        dataset.private = true
+      } else {
+        dataset.id = context.dataset.id
+      }
+
       dataset.owner_org = context.organization.id
-
-      // Hide the dataset initially on create in case of failures
-      dataset.private = true
 
       return axios({
         method: 'post',
-        url: this.buildEndpoint(context, 'package_create'),
+        url: `${context.url.origin}/api/3/action/${method}`,
         data: dataset,
         headers: {
           'Authorization': context.key
@@ -168,27 +179,29 @@ export default {
     },
 
     /**
-     * createResource() creates FileStore resource
+     * touchResource() creates or updates FileStore resource
      *
      * @param {Object} context  - CKAN state object
      * @param {Object} resource - metadata of the resource to be created
      *
      * @return {Object} created CKAN resource
      */
-    createResource: async function (local, remote, resource) {
-      delete resource.id
+    touchResource: async function (local, remote, resource) {
+      let remoteResource = this.remote.resources.filter(r =>
+        r.name === resource.name
+      )
 
       let data = await axios({
         method: 'get',
         url: resource.url
       })
 
-      let formData = new FormData()
       let resourceURL = resource.url.split('/')
 
-      formData.append('package_id', remote.dataset.id)
+      let formData = new FormData()
       formData.append('name', resource.name)
       formData.append('format', resource.format)
+
       formData.append(
         'upload',
         new Blob(
@@ -198,9 +211,17 @@ export default {
         resourceURL[resourceURL.length - 1]
       )
 
+      let method = 'resource_create'
+      if (remoteResource.length === 0) {
+        formData.append('package_id', remote.dataset.id)
+      } else {
+        method = 'resource_update'
+        formData.append('id', content.id)
+      }
+
       return axios({
         method: 'post',
-        url: this.buildEndpoint(remote, 'resource_create'),
+        url: `${remote.url.origin}/api/3/action/${method}`,
         data: formData,
         headers: {
           'Authorization': remote.key
@@ -209,7 +230,7 @@ export default {
     },
 
     /**
-     * createDatastore() creates DataStore resource
+     * touchDatastore() creates or updates DataStore resource
      *
      * @param {Object} local      - source CKAN state object
      * @param {Object} remote     - target CKAN state object
@@ -217,8 +238,11 @@ export default {
      *
      * @return {Object} created CKAN resource
      */
-    createDatastore: async function (local, remote, resource) {
+    touchDatastore: async function (local, remote, resource) {
       let resourceID = resource.id
+      let remoteResource = this.remote.resources.filter(r =>
+        r.name === resource.name
+      )
 
       delete resource.id
       delete resource.url
@@ -226,120 +250,31 @@ export default {
       resource.package_id = remote.dataset.id
 
       // Fetch the data dictionary and number of records from the source CKAN
-      let { fields, records } = await this.getDatastore(local, resourceID)
+      let params = await this.getDatastore(local, resourceID)
+
+      if (remoteResource.length === 0) {
+        params.resource = resource
+      } else {
+        await axios({
+          method: 'post',
+          url: `${remote.url.origin}/api/3/action/datastore_delete`,
+          data: {
+            resource_id: resourceID
+          },
+          headers: {
+            'Authorization': remote.key
+          }
+        })
+
+        params.resource_id = resourceID
+      }
 
       return axios({
         method: 'post',
-        url: this.buildEndpoint(remote, 'datastore_create'),
-        data: {
-          resource: resource,
-          fields: fields,
-          records: records
-        },
+        url: `${remote.url.origin}/api/3/action/datastore_create`,
+        data: params,
         headers: {
           'Authorization': remote.key
-        }
-      })
-    },
-
-    updateDataset: function (context, dataset) {
-      dataset.owner_org = context.organization.id
-      dataset.id = context.dataset.id
-
-      axios({
-        method: 'post',
-        url: this.buildEndpoint(context, 'package_patch'),
-        data: dataset,
-        headers: {
-          'Authorization': context.key
-        }
-      }).then(
-        response => response.data.result
-      )
-    },
-
-    updateResource: async function (local, remote, index) {
-      let resource = local.resources[index]
-      let content = remote.resources[index]
-
-      let data = await axios({
-        method: 'get',
-        url: resource.url
-      })
-
-      let formData = new FormData()
-      let resourceURL = resource.url.split('/')
-
-      formData.append('id', content.id)
-      formData.append('name', resource.name)
-      formData.append('format', resource.format)
-      formData.append(
-        'upload',
-        new Blob( [data.data], { type: data.headers['content-type'] } ),
-        resourceURL[resourceURL.length - 1]
-      )
-
-      return axios({
-        method: 'post',
-        url: this.buildEndpoint(remote, 'resource_update'),
-        data: formData,
-        headers: {
-          'Authorization': remote.key
-        }
-      })
-    },
-
-    updateDatastore: async function (local, remote, resource) {
-      let resourceID = resource.id
-
-      delete resource.id
-      delete resource.url
-
-      resource.package_id = remote.dataset.id
-
-      // Fetch the data dictionary and number of records from the source CKAN
-      let { fields, records } = await this.getDatastore(local, resourceID)
-
-      await axios({
-        method: 'post',
-        url: this.buildEndpoint(remote, 'datastore_delete'),
-        data: {
-          resource_id: resourceID
-        },
-        headers: {
-          'Authorization': remote.key
-        }
-      })
-
-      return axios({
-        method: 'post',
-        url: this.buildEndpoint(remote, 'datastore_create'),
-        data: {
-          resource_id: resourceID,
-          fields: fields,
-          records: records
-        },
-        headers: {
-          'Authorization': remote.key
-        }
-      })
-    },
-
-    /**
-     * publishDataset() sets package from private to public
-     *
-     * @param {Object} context - CKAN state object
-     */
-    publishDataset: function (context) {
-      axios({
-        method: 'post',
-        url: this.buildEndpoint(context, 'package_patch'),
-        data: {
-          id: context.dataset.id,
-          private: false
-        },
-        headers: {
-          'Authorization': context.key
         }
       })
     },
@@ -353,13 +288,13 @@ export default {
       // Delete the resources from the package one by one because CKAN doesn't
       // remove datastore tables correctly when deleting from package level
       // directly
-      for (let rID of context.resourceIDs) {
-        await this.deleteResource(context, rID)
+      for (let resourceID of context.resourceIDs) {
+        await this.deleteResource(context, resourceID)
       }
 
       await axios({
         method: 'post',
-        url: this.buildEndpoint(context, 'package_delete'),
+        url: `${context.url.origin}/api/3/action/package_delete`,
         data: {
           id: context.datasetID
         },
@@ -372,7 +307,7 @@ export default {
     deleteResource: function (context, resourceID) {
       axios({
         method: 'post',
-        url: this.buildEndpoint(context, 'resource_delete'),
+        url: `${context.url.origin}/api/3/action/resource_delete`,
         data: {
           id: resourceID
         },
