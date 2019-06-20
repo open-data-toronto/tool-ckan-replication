@@ -51,6 +51,7 @@ export default {
   props: {
     title: String,
     content: Object,
+    progress: String,
     dim: Boolean,
     open: Boolean
   }
