@@ -145,9 +145,14 @@ export default {
         )
         this.$set(this.remote, 'dataset', remoteDataset)
 
-        this.$set(this.state, 'progress', `${verb} resources`)
         let remoteResources = this.remote.resources.map(r => r.name)
-        for (let resource of this.local.resources) {
+        for (let [idx, resource] of this.local.resources.entries()) {
+          this.$set(
+            this.state,
+            'progress',
+            `${verb} resources (${idx + 1} of ${this.local.resources.length})`
+          )
+
           if (resource.datastore_active) {
             await this.touchDatastore(this.local, this.remote, resource)
           } else {
@@ -159,6 +164,7 @@ export default {
 
         for (let resource of this.remote.resources) {
           if (remoteResources.indexOf(resource.name)) {
+            this.$set(this.state, 'progress', `Deleting old resources`)
             await this.deleteResource(this.remote, resource.id)
           }
         }
