@@ -117,8 +117,7 @@ export default {
       this.$set(this.remote, 'organization', remoteOrganization)
 
       if (this.remote.url === this.instances[2].value) {
-        // let remoteDataset = await this.getDataset(this.remote, dID)
-        let remoteDataset = await this.getDataset(this.remote, 'example-geospatial-points-data')
+        let remoteDataset = await this.getDataset(this.remote, dID)
         this.remote = Object.assign(remoteDataset, this.remote)
 
         this.$set(

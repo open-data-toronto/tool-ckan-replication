@@ -44,7 +44,7 @@
 import TableDisplay from '@/components/TableDisplay.vue'
 
 export default {
-  name: 'ModalExample',
+  name: 'TheModal',
   components: {
     TableDisplay
   },
