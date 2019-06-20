@@ -19,7 +19,7 @@
                   :error="errors.missing.show"
                   @change="set"/>
                 <FormToggle
-                  title="Remove on Complete?"
+                  title="Remove content on complete?"
                   name="purge"
                   :default="this.state.purge"
                   @change="set"/>
@@ -43,7 +43,7 @@
                   :error="errors.missing.show"
                   @change="set"/>
                 <FormToggle
-                  title="Keep Private?"
+                  title="Keep created package private?"
                   name="secret"
                   :default="this.state.secret"
                   @change="set"/>
@@ -106,50 +106,45 @@ export default {
     load: async function () {
       let dID = this.local.url.pathname.split('/')[2]
 
-      let content = await this.getDataset(this.local, dID)
-      for (let [key, value] of content.entries()) {
-        this.$set(this.local, key, value)
-      }
+      this.local = Object.assign(
+        await this.getDataset(this.local, dID),
+        this.local
+      )
 
-      let original = await this.getDataset(this.remote, dID)
-      for (let [key, value] of original.entries()) {
-        this.$set(this.remote, key, value)
-      }
+      // Fetches the target organization
+      this.$set(
+        this.remote,
+        'organization',
+        await this.getOrganization(this.local)
+      )
 
-      // Validate if original is an empty object and exist in target CKAN
-      if (Object.keys(original).length !== 0) {
-        this.$set(this.state, create, false)
-        this.$set(this.delta, this.findDifference(content, original))
+      if (this.remote.url === this.instances[2].value) {
+        this.remote = Object.assign(
+          // await this.getDataset(this.remote, dID),
+          await this.getDataset(this.remote, 'example-geospatial-points-data'),
+          this.remote
+        )
 
-        let cResourceMap = convertMap(content.resources, 'name')
-        let oResourceMap = convertMap(original.resources, 'name')
-
-        let resourceDelta = {}
-        for (let r of cResourceMap) {
-          if (!oResourceMap.hasOwnProperty(r.name)) {
-            resourceDelta[r.name] = 'insert'
-          } else {
-            resourceDelta[r.name] = this.findDifference(cResourceMap[r.name], oResourceMap[r.name])
-          }
-        }
-
-        for (let r of oResourceMap) {
-          if (!a.hasOwnProperty(r.name)) {
-            resourceDelta[r.name] = 'delete'
-          }
-        }
-
-        this.$set(this.delta, 'resources', resourceDelta)
+        this.$set(
+          this.state,
+          'mode',
+          this.remote !== null &&
+            this.remote.hasOwnProperty('dataset') ? 'update' : 'create'
+        )
       }
     },
 
     // replicate() creates the source package and resources in the target CKAN
     replicate: async function () {
-      try {
-        // Fetches the target organization
-        let remoteOrganization = await this.getOrganization(this.local)
-        this.$set(this.remote, 'organization', remoteOrganization)
+      if (this.state.mode === 'create') {
+        this.create()
+      } else {
+        this.update()
+      }
+    },
 
+    create: async function () {
+      try {
         // Replicate the source package in target
         let replicant = await this.createDataset(
           this.remote,
@@ -158,14 +153,9 @@ export default {
         this.$set(this.remote, 'dataset', replicant)
 
         // Replicate the resources
-        for (let [idx, resource] of this.local.resources.entries()) {
+        for (let resource of this.local.resources) {
           if (resource.datastore_active) {
-            await this.createDatastore(
-              this.local,
-              this.remote,
-              this.local.resourceIDs[idx],
-              resource
-            )
+            await this.createDatastore(this.local, this.remote, resource)
           } else {
             await this.createResource(this.remote, resource)
           }
@@ -178,7 +168,7 @@ export default {
 
         // Deletes the original source package
         if (
-          this.local.url.origin !== 'https://ckanadmin.prod-toronto.ca' ||
+          this.local.url.origin !== this.instances[2].values ||
           !this.state.purge
         ) {
           await this.deleteDataset(this.local)
@@ -186,13 +176,48 @@ export default {
       } catch {
         await this.deleteDataset(this.remote)
       }
+    },
 
-      return true
+    update: async function () {
+      let replicant = await this.updateDataset(
+        this.remote,
+        this.local.dataset
+      )
+      this.$set(this.remote, 'dataset', replicant)
+
+      let remoteResources = this.remote.resources.map(r => r.name)
+
+      for (let [idx, resource] of this.local.resources.entries()) {
+        if (remoteResources.indexOf(resource.name) !== -1) {
+          if (resource.datastore_active) {
+            await this.updateDatastore(this.local, this.remote, resource)
+          } else {
+            await this.updateResource(this.local, this.remote, idx)
+          }
+        } else {
+          if (resource.datastore_active) {
+            await this.createDatastore(this.local, this.remote, resource)
+          } else {
+            await this.createResource(this.remote, resource)
+          }
+        }
+
+        remoteResources.pop(resource.name)
+      }
+
+      for (let resource of this.remote.resources) {
+        if (remoteResources.indexOf(resource.name)) {
+          await this.deleteResource(this.remote, resource.id)
+        }
+      }
+
+      if (!this.state.purge) {
+        await this.deleteDataset(this.local)
+      }
     },
 
     // set() updates and validates the input variables
     set: function (value, loc, key) {
-      console.log(value, loc, key)
       let update = loc === 'local' ? this.local : this.remote
 
       if (key === 'url') {
@@ -235,6 +260,7 @@ export default {
         )
 
         if (!this.hasError) {
+        // if (true) {
           this.state.open = true
 
           // Reload the entire modal on every show since no validation on if
@@ -253,13 +279,15 @@ export default {
       local: {},
 
       // CKAN info and model metadata created in the target
-      remote: {},
+      remote: {
+        key: '3273a057-d6dc-482d-8a79-2a3615e9136e'
+      },
 
       // object tracking changes between local and remote CKAN instances
       delta: {},
 
       state: {
-        create: true, // track if package needs to be create in remote CKAN
+        mode: 'create', // track if package needs to be create in remote CKAN
         error: null, // track error state
         open: false, // track if modal is open
         purge: true, // track if package should be cleaned up from local CKAN
