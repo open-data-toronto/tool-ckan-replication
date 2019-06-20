@@ -258,9 +258,7 @@ export default {
       local: {},
 
       // CKAN info and model metadata created in the target
-      remote: {
-        key: '3273a057-d6dc-482d-8a79-2a3615e9136e'
-      },
+      remote: {},
 
       // object tracking changes between local and remote CKAN instances
       delta: {},
