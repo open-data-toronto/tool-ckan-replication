@@ -251,7 +251,7 @@ export default {
         progress: '', // track loading progress
         error: null, // track error state
         loading: false, // track if loading content to CKAN
-        validating: false, // track if modal is open
+        validating: false // track if modal is open
       },
 
       instances: [
