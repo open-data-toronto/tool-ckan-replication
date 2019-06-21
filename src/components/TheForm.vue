@@ -144,7 +144,7 @@ export default {
         )
         this.$set(this.remote, 'dataset', remoteDataset)
 
-        let remoteResources = this.remote.resources.map(r => r.name)
+        let localResources = []
         for (let [idx, resource] of this.local.resources.entries()) {
           this.$set(
             this.state,
@@ -158,23 +158,15 @@ export default {
             await this.touchResource(this.local, this.remote, resource)
           }
 
-          if (remoteResources.indexOf(resource.name)) {
-            remoteResources.pop(resource.name)
-          }
+          localResources.push(resource.name)
         }
 
         for (let resource of this.remote.resources) {
-          if (remoteResources.indexOf(resource.name) !== -1) {
+          if (localResources.indexOf(resource.name) === -1) {
             this.$set(this.state, 'progress', `Deleting old resources`)
             await this.deleteResource(this.remote, resource.id)
           }
         }
-
-        // Publish the created target package
-        // if (!this.state.secret) {
-        //   this.$set(this.state, 'progress', 'Setting dataset as public')
-        //   await this.publishDataset(this.remote)
-        // }
 
         // Deletes the original source package
         // if (this.state.mode === 'create' && this.state.purge) {
@@ -187,13 +179,13 @@ export default {
         if (this.state.mode === 'create') {
           await this.deleteDataset(this.remote)
         }
-      } finally {
-        this.$set(this.state, 'validating', false)
-        window.open(
-          `${this.remote.url.origin}/dataset/${remoteDataset.name}`,
-          '_blank'
-        )
       }
+
+      this.$set(this.state, 'validating', false)
+      window.open(
+        `${this.remote.url.origin}/dataset/${remoteDataset.name}`,
+        '_blank'
+      )
 
       this.$set(this.state, 'progress', '')
       this.$set(this.state, 'loading', false)
