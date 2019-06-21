@@ -169,10 +169,10 @@ export default {
         }
 
         // Deletes the original source package
-        // if (this.state.mode === 'create' && this.state.purge) {
-        //   this.$set(this.state, 'progress', 'Deleting original dataset')
-        //   await this.deleteDataset(this.local)
-        // }
+        if (this.state.mode === 'create' && this.state.purge) {
+          this.$set(this.state, 'progress', 'Deleting original dataset')
+          await this.deleteDataset(this.local)
+        }
       } catch (e) {
         // Rollback on update should be different
         this.$set(this.state, 'progress', 'Rolling back changes')

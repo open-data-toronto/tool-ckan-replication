@@ -3,27 +3,6 @@ const axios = require('axios')
 export default {
   methods: {
     /**
-     * publishDataset() sets package from private to public
-     *
-     * @param {Object} context - CKAN state object
-     */
-    publishDataset: function (context) {
-      setTimeout(function () {
-        axios({
-          method: 'post',
-          url: `${context.url.origin}/api/3/action/package_patch`,
-          data: {
-            id: context.dataset.id,
-            private: false
-          },
-          headers: {
-            'Authorization': context.key
-          }
-        })
-      }, 20000)
-    },
-
-    /**
      * getOrganization() fetches the organization metadata
      *
      * @param {Object} context - CKAN state object
@@ -162,7 +141,6 @@ export default {
 
       if (how === 'create') {
         delete dataset.id
-        dataset.private = true
       } else {
         dataset.id = context.dataset.id
       }
