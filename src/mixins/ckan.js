@@ -8,17 +8,19 @@ export default {
      * @param {Object} context - CKAN state object
      */
     publishDataset: function (context) {
-      axios({
-        method: 'post',
-        url: `${context.url.origin}/api/3/action/package_patch`,
-        data: {
-          id: context.dataset.id,
-          private: false
-        },
-        headers: {
-          'Authorization': context.key
-        }
-      })
+      setTimeout(function () {
+        axios({
+          method: 'post',
+          url: `${context.url.origin}/api/3/action/package_patch`,
+          data: {
+            id: context.dataset.id,
+            private: false
+          },
+          headers: {
+            'Authorization': context.key
+          }
+        })
+      }, 20000)
     },
 
     /**
@@ -28,13 +30,13 @@ export default {
      *
      * @return {Object} CKAN organization
      */
-    getOrganization: function (context) {
+    getOrganization: function (context, organizationName) {
       return axios({
         method: 'get',
         url: `${context.url.origin}/api/3/action/organization_show`,
         params: {
           // Matches organization by name (instead of ID)
-          id: context.organization.name
+          id: organizationName
         }
       }).then(
         response => response.data.result
@@ -53,9 +55,10 @@ export default {
         method: 'get',
         url: `${context.url.origin}/api/3/action/package_show`,
         params: {
-          // Parse out the package name assuming that the URL is the path to the
-          // dataset (eg. <protocol>://<host>/dataset/<package-name>)
           'id': datasetID
+        },
+        headers: {
+          'Authorization': context.key
         }
       }).then(response => {
         let result = response.data.result
@@ -106,7 +109,7 @@ export default {
 
         return content
       }).catch(e => {
-        return null
+        return
       })
     },
 
@@ -155,7 +158,7 @@ export default {
      * @return {Object} created CKAN package
      */
     touchDataset: function (how, context, dataset) {
-      let method = how === 'create' ? 'package_create' : 'package_update'
+      let method = how === 'create' ? 'package_create' : 'package_patch'
 
       if (how === 'create') {
         delete dataset.id
@@ -163,7 +166,7 @@ export default {
       } else {
         dataset.id = context.dataset.id
       }
-
+      
       dataset.owner_org = context.organization.id
 
       return axios({
@@ -215,7 +218,7 @@ export default {
       if (remoteResource.length === 0) {
         formData.append('package_id', remote.dataset.id)
       } else {
-        method = 'resource_update'
+        method = 'resource_patch'
         formData.append('id', remoteResource[0].id)
       }
 
@@ -246,6 +249,7 @@ export default {
 
       delete resource.id
       delete resource.url
+      delete resource.datastore_active
 
       resource.package_id = remote.dataset.id
 
@@ -259,16 +263,17 @@ export default {
           method: 'post',
           url: `${remote.url.origin}/api/3/action/datastore_delete`,
           data: {
-            resource_id: resourceID
+            id: remoteResource[0].id
           },
           headers: {
             'Authorization': remote.key
           }
         })
 
-        params.resource_id = resourceID
+        params.resource_id = remoteResource[0].id
       }
 
+      // TODO: Paginate datastore upload
       return axios({
         method: 'post',
         url: `${remote.url.origin}/api/3/action/datastore_create`,
@@ -288,8 +293,10 @@ export default {
       // Delete the resources from the package one by one because CKAN doesn't
       // remove datastore tables correctly when deleting from package level
       // directly
-      for (let resourceID of context.resourceIDs) {
-        await this.deleteResource(context, resourceID)
+      if (context.hasOwnProperty('resources')) {
+        for (let resource of context.resources) {
+          await this.deleteResource(context, resource.id)
+        }
       }
 
       await axios({

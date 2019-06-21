@@ -56,6 +56,7 @@
           <ModalDataset
             :open="state.validating"
             :dim="state.loading"
+            :progress="state.progress"
             :content="local"
             :title="this.state.mode == 'create'
               ? 'New Dataset' : 'Update Dataset'"
@@ -113,19 +114,18 @@ export default {
       )
 
       // Fetches the target organization
-      let remoteOrganization = await this.getOrganization(this.local)
+      let remoteOrganization = await this.getOrganization(
+        this.remote, 
+        this.local.organization.name
+      )
       this.$set(this.remote, 'organization', remoteOrganization)
 
-      if (this.remote.url === this.instances[2].value) {
-        let remoteDataset = await this.getDataset(this.remote, dID)
+      let remoteDataset = await this.getDataset(this.remote, dID)
+      if (remoteDataset !== undefined) {
         this.remote = Object.assign(remoteDataset, this.remote)
-
-        this.$set(
-          this.state,
-          'mode',
-          (this.remote !== null && this.remote.hasOwnProperty('dataset'))
-            ? 'update' : 'create'
-        )
+        this.$set(this.state, 'mode', 'update')
+      } else {
+        this.$set(this.remote, 'resources', [])
       }
     },
 
@@ -133,7 +133,7 @@ export default {
     replicate: async function () {
       let verb = this.state.mode === 'create' ? 'Creating' : 'Updating'
       this.$set(this.state, 'loading', true)
-
+      
       let remoteDataset
       try {
         this.$set(this.state, 'progress', `${verb} dataset`)
@@ -158,34 +158,37 @@ export default {
             await this.touchResource(this.local, this.remote, resource)
           }
 
-          remoteResources.pop(resource.name)
+          if (remoteResources.indexOf(resource.name)) {
+            remoteResources.pop(resource.name)
+          }
         }
 
         for (let resource of this.remote.resources) {
-          if (remoteResources.indexOf(resource.name)) {
+          if (remoteResources.indexOf(resource.name) !== -1) {
             this.$set(this.state, 'progress', `Deleting old resources`)
             await this.deleteResource(this.remote, resource.id)
           }
         }
 
         // Publish the created target package
-        if (!this.state.secret) {
-          this.$set(this.state, 'progress', 'Setting dataset as public')
-          await this.publishDataset(this.remote)
-        }
+        // if (!this.state.secret) {
+        //   this.$set(this.state, 'progress', 'Setting dataset as public')
+        //   await this.publishDataset(this.remote)
+        // }
 
         // Deletes the original source package
-        if (this.state.mode === 'create' && this.state.purge) {
-          this.$set(this.state, 'progress', 'Deleting original dataset')
-          await this.deleteDataset(this.local)
-        }
-      } catch {
+        // if (this.state.mode === 'create' && this.state.purge) {
+        //   this.$set(this.state, 'progress', 'Deleting original dataset')
+        //   await this.deleteDataset(this.local)
+        // }
+      } catch (e) {
         // Rollback on update should be different
         this.$set(this.state, 'progress', 'Rolling back changes')
         if (this.state.mode === 'create') {
           await this.deleteDataset(this.remote)
         }
       } finally {
+        this.$set(this.state, 'validating', false)
         window.open(
           `${this.remote.url.origin}/dataset/${remoteDataset.name}`,
           '_blank'
@@ -255,13 +258,16 @@ export default {
   data () {
     return {
       // CKAN info and model metadata from the source
-      local: {},
+      local: {
+        'url': new URL('https://ckanadmin0.intra.dev-toronto.ca/dataset/cc-extract-test-package'),
+        'key':'784f11cc-b170-4377-83a3-38ba28662b16'
+      },
 
       // CKAN info and model metadata created in the target
-      remote: {},
-
-      // object tracking changes between local and remote CKAN instances
-      delta: {},
+      remote: {
+        'url': new URL('http://docker.for.mac.localhost:5000'),
+        'key': 'ad4d06b1-61e2-449c-af1f-c1a76c3e107b'
+      },
 
       state: {
         mode: 'create', // track if package needs to be create in remote CKAN

@@ -1,8 +1,5 @@
 <template lang="html">
   <div>
-    <sui-dimmer :active="dim">
-      <sui-loader>{{ progress }}</sui-loader>
-    </sui-dimmer>
     <sui-button basic
       type="button"
       content="Show Data"
@@ -13,6 +10,9 @@
       v-model="open"
       v-bind:closable="false"
       v-if="content.dataset !== undefined">
+      <sui-dimmer :active="dim">
+        <sui-loader>{{ progress }}</sui-loader>
+      </sui-dimmer>
       <sui-modal-header>
         {{ title }}
       </sui-modal-header>
@@ -22,8 +22,8 @@
             :title="content.dataset.title"
             :content="content.dataset"/>
           <TableDisplay
-            :title="resource.name"
             v-for="resource in content.resources"
+            :title="resource.name"
             :key="resource.name"
             :content="resource"/>
         </sui-modal-description>
