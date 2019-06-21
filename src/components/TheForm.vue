@@ -109,7 +109,7 @@ export default {
       this.$set(this.remote, 'organization', remoteOrganization)
 
       let remoteDataset = await this.getDataset(this.remote, dID)
-      if (remoteDataset !== undefined) {
+      if (remoteDataset !== null) {
         this.remote = Object.assign(remoteDataset, this.remote)
         this.$set(this.state, 'mode', 'update')
       } else {
