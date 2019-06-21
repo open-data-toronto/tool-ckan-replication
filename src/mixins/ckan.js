@@ -88,7 +88,7 @@ export default {
 
         return content
       }).catch(e => {
-        return
+        return null
       })
     },
 
@@ -144,7 +144,7 @@ export default {
       } else {
         dataset.id = context.dataset.id
       }
-      
+
       dataset.owner_org = context.organization.id
 
       return axios({

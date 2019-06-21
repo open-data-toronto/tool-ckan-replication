@@ -18,11 +18,6 @@
                   name="local"
                   :error="errors.missing.show"
                   @change="set"/>
-                <FormToggle
-                  title="Remove content on complete?"
-                  name="purge"
-                  :default="this.state.purge"
-                  @change="set"/>
               </sui-segment>
             </sui-segment>
           </sui-grid-column>
@@ -41,11 +36,6 @@
                   title="API Key"
                   name="remote"
                   :error="errors.missing.show"
-                  @change="set"/>
-                <FormToggle
-                  title="Keep created package private?"
-                  name="secret"
-                  :default="this.state.secret"
                   @change="set"/>
               </sui-segment>
             </sui-segment>
@@ -72,7 +62,6 @@
 import FormSecret from '@/components/FormSecret.vue'
 import FormInput from '@/components/FormInput.vue'
 import FormDropdown from '@/components/FormDropdown.vue'
-import FormToggle from '@/components/FormToggle.vue'
 
 import ErrorMessage from '@/components/ErrorMessage.vue'
 
@@ -86,7 +75,6 @@ export default {
     FormSecret,
     FormInput,
     FormDropdown,
-    FormToggle,
     ErrorMessage,
     ModalDataset
   },
@@ -115,7 +103,7 @@ export default {
 
       // Fetches the target organization
       let remoteOrganization = await this.getOrganization(
-        this.remote, 
+        this.remote,
         this.local.organization.name
       )
       this.$set(this.remote, 'organization', remoteOrganization)
@@ -133,7 +121,7 @@ export default {
     replicate: async function () {
       let verb = this.state.mode === 'create' ? 'Creating' : 'Updating'
       this.$set(this.state, 'loading', true)
-      
+
       let remoteDataset
       try {
         this.$set(this.state, 'progress', `${verb} dataset`)
@@ -169,7 +157,10 @@ export default {
         }
 
         // Deletes the original source package
-        if (this.state.mode === 'create' && this.state.purge) {
+        if (
+          this.state.mode === 'create' &&
+          this.local.url.origin !== this.instances[2].value
+        ) {
           this.$set(this.state, 'progress', 'Deleting original dataset')
           await this.deleteDataset(this.local)
         }
@@ -250,16 +241,10 @@ export default {
   data () {
     return {
       // CKAN info and model metadata from the source
-      local: {
-        'url': new URL('https://ckanadmin0.intra.dev-toronto.ca/dataset/cc-extract-test-package'),
-        'key':'784f11cc-b170-4377-83a3-38ba28662b16'
-      },
+      local: {},
 
       // CKAN info and model metadata created in the target
-      remote: {
-        'url': new URL('http://docker.for.mac.localhost:5000'),
-        'key': 'ad4d06b1-61e2-449c-af1f-c1a76c3e107b'
-      },
+      remote: {},
 
       state: {
         mode: 'create', // track if package needs to be create in remote CKAN
@@ -267,8 +252,6 @@ export default {
         error: null, // track error state
         loading: false, // track if loading content to CKAN
         validating: false, // track if modal is open
-        purge: true, // track if package should be cleaned up from local CKAN
-        secret: false // track if remote package created should be kept private
       },
 
       instances: [
