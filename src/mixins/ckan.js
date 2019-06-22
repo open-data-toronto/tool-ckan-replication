@@ -117,9 +117,11 @@ export default {
       )
 
       // Remove the auto-generated '_id' field from the records and fields
-      for (let field of records) {
-        delete field._id
-      }
+      await (() => { 
+        for (let field of records) {
+          delete field._id
+        }
+      })()
 
       return {
         'fields': fields.filter(row => row.id !== '_id'),
