@@ -133,20 +133,33 @@ export default {
         this.$set(this.remote, 'dataset', remoteDataset)
 
         let localResources = []
-        for (let [idx, resource] of this.local.resources.entries()) {
-          this.$set(
-            this.state,
-            'progress',
-            `${verb} resources (${idx + 1} of ${this.local.resources.length})`
-          )
 
-          if (resource.datastore_active) {
-            await this.touchDatastore(this.local, this.remote, resource)
-          } else {
-            await this.touchResource(this.local, this.remote, resource)
-          }
-
-          localResources.push(resource.name)
+        for (let resource of this.local.resources) {
+          await new Promise((resolve, reject) => {
+            let idx = this.local.resources.indexOf(resource)
+            this.$set(
+              this.state,
+              'progress',
+              `${verb} resources (${idx + 1} of ${this.local.resources.length})`
+            )
+            
+            let touch = resource.datastore_active ? this.touchDatastore : this.touchResource
+              
+            touch(this.local, this.remote, resource)
+              .then(success => resolve(success))
+              .catch(err => reject(err))
+          })
+            .then( success => {
+              console.debug(`Resource created: ${success.data.result.resource ? success.data.result.name : success.data.result.resource.name}`)
+            })
+            .catch( err => {
+              console.debug(`Resource not created: ${resource.name}`)
+              console.debug(err)
+            })
+            .finally( i => { 
+              localResources.push(resource.name)
+              console.debug('')
+            })
         }
 
         for (let resource of this.remote.resources) {
