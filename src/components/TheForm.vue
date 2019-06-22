@@ -161,14 +161,14 @@ export default {
               console.debug('')
             })
         }
-
-        for (let resource of this.remote.resources) {
-          if (localResources.indexOf(resource.name) === -1) {
-            this.$set(this.state, 'progress', `Deleting old resources`)
-            await this.deleteResource(this.remote, resource.id)
-          }
+        
+        for (let resource of this.remote.resources.filter(r => localResources.indexOf(r.name) === -1)) {
+          await new Promise(resolve => {
+              this.$set(this.state, 'progress', `Deleting old resources`)
+              this.deleteResource(this.remote, resource.id).then(resolve)
+            })
         }
-
+            
         // Deletes the original source package
         if (
           this.state.mode === 'create' &&
