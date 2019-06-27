@@ -86,6 +86,8 @@ export default {
           }
         )
 
+        content.resourceIDs = result.resources.map(r => r.id)
+
         return content
       }).catch(e => {
         return null
@@ -274,7 +276,7 @@ export default {
       // remove datastore tables correctly when deleting from package level
       // directly
       if (context.hasOwnProperty('resources')) {
-        for (let resource of context.resources) {
+        for (let resource of context.resourcesIDs) {
           await this.deleteResource(context, resource.id)
         }
       }
