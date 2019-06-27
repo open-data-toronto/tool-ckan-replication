@@ -133,43 +133,47 @@ export default {
         this.$set(this.remote, 'dataset', remoteDataset)
 
         let localResources = []
-        for (let [idx, resource] of this.local.resources.entries()) {
-          this.$set(
-            this.state,
-            'progress',
-            `${verb} resources (${idx + 1} of ${this.local.resources.length})`
-          )
-
-          if (resource.datastore_active) {
-            await this.touchDatastore(this.local, this.remote, resource)
-          } else {
-            await this.touchResource(this.local, this.remote, resource)
+        await (async () => {
+          for (let resource of this.local.resources) {
+            this.$set(
+              this.state,
+              'progress',
+              `${verb} resources (${this.local.resources.indexOf(resource) + 1} of ${this.local.resources.length})`
+            )
+            let localResource = await (resource.datastore_active ? this.touchDatastore : this.touchResource)(this.local, this.remote, resource)
+            console.debug(`Resource ${this.state.mode === 'create' ? 'created' : 'updated'}: ${resource.name}`)
+            localResources.push(localResource.data.result)
           }
+        })()
 
-          localResources.push(resource.name)
-        }
-
-        for (let resource of this.remote.resources) {
-          if (localResources.indexOf(resource.name) === -1) {
-            this.$set(this.state, 'progress', `Deleting old resources`)
-            await this.deleteResource(this.remote, resource.id)
+        await (async () => {
+          for (let resource of this.remote.resources){
+            if(localResources.map(r => r.name).indexOf(resource.name) === -1) {
+              await (() => {
+                this.$set(this.state, 'progress', `Deleting old resources`)
+                this.deleteResource(this.remote, (resource.id ? resource.id : resource.resource_id))
+                })()
+              }
           }
-        }
-
+        })()
+            
         // Deletes the original source package
-        if (
-          this.state.mode === 'create' &&
-          this.local.url.origin !== this.instances[2].value
-        ) {
-          this.$set(this.state, 'progress', 'Deleting original dataset')
-          await this.deleteDataset(this.local)
-        }
-      } catch (e) {
+        await (async () => {
+          if (
+            this.state.mode === 'create' &&
+            this.local.url.origin !== this.instances[2].value
+          ) {
+            this.$set(this.state, 'progress', 'Deleting original dataset')
+            await this.deleteDataset(this.local)
+          }
+        })()
+      } catch (err) {
         // Rollback on update should be different
         this.$set(this.state, 'progress', 'Rolling back changes')
         if (this.state.mode === 'create') {
           await this.deleteDataset(this.remote)
         }
+        console.error(err)
       }
 
       this.$set(this.state, 'validating', false)
@@ -177,7 +181,6 @@ export default {
         `${this.remote.url.origin}/dataset/${remoteDataset.name}`,
         '_blank'
       )
-
       this.$set(this.state, 'progress', '')
       this.$set(this.state, 'loading', false)
     },
