@@ -236,7 +236,11 @@ export default {
       resource.package_id = remote.dataset.id
 
       // Fetch the data dictionary and number of records from the source CKAN
-      let params = await this.getDatastore(local, resourceID)
+      let { fields, records } = await this.getDatastore(local, resourceID)
+      let params = {
+        fields: fields,
+        records: []
+      }
 
       if (remoteResource.length === 0) {
         params.resource = resource
@@ -255,8 +259,7 @@ export default {
         params.resource_id = remoteResource[0].id
       }
 
-      // TODO: Paginate datastore upload
-      return axios({
+      remoteResource = await axios({
         method: 'post',
         url: `${remote.url.origin}/api/3/action/datastore_create`,
         data: params,
@@ -264,6 +267,24 @@ export default {
           'Authorization': remote.key
         }
       })
+
+      let chunkSize = 5000
+      for (let i = 0; i < records.length; i += chunkSize) {
+        let tmpArry = records.slice(i, i + chunkSize)
+
+        await axios({
+          method: 'post',
+          url: `${remote.url.origin}/api/3/action/datastore_upsert`,
+          data: {
+            resource_id: remoteResource.id,
+            records: tmpArry,
+            method: 'insert'
+          },
+          headers: {
+            'Authorization': remote.key
+          }
+        })
+      }
     },
 
     /**

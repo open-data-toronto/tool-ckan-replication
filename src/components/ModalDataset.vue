@@ -51,8 +51,8 @@ export default {
   calculated: {
     action: function () {
       return this.title.split(' ').map((word) => {
-        return (word.charAt(0).toUpperCase() + word.slice(1));
-      }).join(' ');
+        return (word.charAt(0).toUpperCase() + word.slice(1))
+      }).join(' ')
     }
   },
   props: {
