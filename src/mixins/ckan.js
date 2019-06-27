@@ -203,7 +203,6 @@ export default {
         formData.append('url', resource.url)
       }
 
-
       let method = 'resource_create'
       if (remoteResource.length === 0) {
         formData.append('package_id', remote.dataset.id)
