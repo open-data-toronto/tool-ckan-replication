@@ -33,7 +33,7 @@
           Cancel
         </sui-button>
         <sui-button type="button" primary @click="$emit('submit')">
-          Submit
+          {{ action }}
         </sui-button>
       </sui-modal-actions>
     </sui-modal>
@@ -47,6 +47,13 @@ export default {
   name: 'TheModal',
   components: {
     TableDisplay
+  },
+  calculated: {
+    action: function () {
+      return this.title.split(' ').map((word) => {
+        return (word.charAt(0).toUpperCase() + word.slice(1));
+      }).join(' ');
+    }
   },
   props: {
     title: String,
