@@ -272,18 +272,19 @@ export default {
     deleteDataset: async function (context) {
       // Delete the resources from the package one by one because CKAN doesn't
       // remove datastore tables correctly when deleting from package level
-      // directly
-      if (context.hasOwnProperty('resources')) {
-        for (let resource of context.resources) {
-          await this.deleteResource(context, resource.id)
-        }
-      }
+      await(async () => {
+        if (context.hasOwnProperty('resources')) {
+          for (let resource of context.resources) {
+              await this.deleteResource(context, resource.id)
+            }
+          }
+      })()
 
       await axios({
         method: 'post',
-        url: `${context.url.origin}/api/3/action/package_delete`,
+        url: `${context.url.origin}/api/3/action/dataset_purge`,
         data: {
-          id: context.datasetID
+          id: context.dataset.id
         },
         headers: {
           'Authorization': context.key
