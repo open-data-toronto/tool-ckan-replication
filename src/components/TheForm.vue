@@ -134,11 +134,11 @@ export default {
 
         let localResources = []
         await (async () => {
-          for (let resource of this.local.resources) {
+          for (let [index, resource] of this.local.resources.entries()) {
             this.$set(
               this.state,
               'progress',
-              `${verb} resources (${this.local.resources.indexOf(resource) + 1} of ${this.local.resources.length})`
+              `${verb} resources (${index + 1} of ${this.local.resources.length})`
             )
             let localResource = await (resource.datastore_active ? this.touchDatastore : this.touchResource)(this.local, this.remote, resource)
             console.debug(`Resource ${this.state.mode === 'create' ? 'created' : 'updated'}: ${resource.name}`)
@@ -147,16 +147,16 @@ export default {
         })()
 
         await (async () => {
-          for (let resource of this.remote.resources){
-            if(localResources.map(r => r.name).indexOf(resource.name) === -1) {
+          for (let resource of this.remote.resources) {
+            if (localResources.map(r => r.name).indexOf(resource.name) === -1) {
               await (() => {
                 this.$set(this.state, 'progress', `Deleting old resources`)
                 this.deleteResource(this.remote, (resource.id ? resource.id : resource.resource_id))
-                })()
-              }
+              })()
+            }
           }
         })()
-            
+
         // Deletes the original source package
         await (async () => {
           if (

@@ -117,7 +117,7 @@ export default {
       )
 
       // Remove the auto-generated '_id' field from the records and fields
-      await (() => { 
+      await (() => {
         for (let field of records) {
           delete field._id
         }
@@ -272,19 +272,18 @@ export default {
     deleteDataset: async function (context) {
       // Delete the resources from the package one by one because CKAN doesn't
       // remove datastore tables correctly when deleting from package level
-      await(async () => {
-        if (context.hasOwnProperty('resources')) {
-          for (let resource of context.resources) {
-              await this.deleteResource(context, resource.id)
-            }
-          }
-      })()
+      // directly
+      if (context.hasOwnProperty('resources')) {
+        for (let resource of context.resources) {
+          await this.deleteResource(context, resource.id)
+        }
+      }
 
       await axios({
         method: 'post',
-        url: `${context.url.origin}/api/3/action/dataset_purge`,
+        url: `${context.url.origin}/api/3/action/package_delete`,
         data: {
-          id: context.dataset.id
+          id: context.datasetID
         },
         headers: {
           'Authorization': context.key
