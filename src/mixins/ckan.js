@@ -143,6 +143,9 @@ export default {
     touchDataset: function (how, context, dataset) {
       let method = how === 'create' ? 'package_create' : 'package_patch'
 
+      delete dataset.last_refreshed
+      delete dataset.formats
+
       if (how === 'create') {
         delete dataset.id
       } else {
