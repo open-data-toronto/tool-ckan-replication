@@ -179,25 +179,30 @@ export default {
         r.name === resource.name
       )
 
-      let data = await axios({
-        method: 'get',
-        url: resource.url
-      })
-
-      let resourceURL = resource.url.split('/')
-
       let formData = new FormData()
+
       formData.append('name', resource.name)
       formData.append('format', resource.format)
 
-      formData.append(
-        'upload',
-        new Blob(
-          [data.data],
-          { type: data.headers['content-type'] }
-        ),
-        resourceURL[resourceURL.length - 1]
-      )
+      if (resource.url === 'upload') {
+        let resourceURL = resource.url.split('/')
+        let data = await axios({
+          method: 'get',
+          url: resource.url
+        })
+
+        formData.append(
+          'upload',
+          new Blob(
+            [data.data],
+            { type: data.headers['content-type'] }
+          ),
+          resourceURL[resourceURL.length - 1]
+        )
+      } else {
+        formData.append('url', resource.url)
+      }
+
 
       let method = 'resource_create'
       if (remoteResource.length === 0) {
