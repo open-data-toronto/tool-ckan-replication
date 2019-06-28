@@ -48,11 +48,9 @@ export default {
   components: {
     TableDisplay
   },
-  calculated: {
+  computed: {
     action: function () {
-      return this.title.split(' ').map((word) => {
-        return (word.charAt(0).toUpperCase() + word.slice(1))
-      }).join(' ')
+      return this.title.startsWith('New') ? 'Create Dataset' : 'Update Dataset'
     }
   },
   props: {

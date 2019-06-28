@@ -131,8 +131,8 @@ export default {
           this.local.dataset
         )
         this.$set(this.remote, 'dataset', remoteDataset)
+        this.$set(this.remote, 'resourceIDs', [])
 
-        let localResources = []
         await (async () => {
           for (let [index, resource] of this.local.resources.entries()) {
             this.$set(
@@ -140,20 +140,16 @@ export default {
               'progress',
               `${verb} resources (${index + 1} of ${this.local.resources.length})`
             )
-            let localResource = await (resource.datastore_active ? this.touchDatastore : this.touchResource)(this.local, this.remote, resource)
-            console.debug(`Resource ${this.state.mode === 'create' ? 'created' : 'updated'}: ${resource.name}`)
-            localResources.push(localResource.data.result)
-          }
-        })()
 
-        await (async () => {
-          for (let resource of this.remote.resources) {
-            if (localResources.map(r => r.name).indexOf(resource.name) === -1) {
-              await (() => {
-                this.$set(this.state, 'progress', `Deleting old resources`)
-                this.deleteResource(this.remote, (resource.id ? resource.id : resource.resource_id))
-              })()
+            if (resource.datastore_active) {
+              let remoteResource = await this.touchDatastore(this.local, this.remote, resource)
+              this.remote.resourceIDs.push(remoteResource.resource_id)
+            } else {
+              let remoteResource = await this.touchResource(this.local, this.remote, resource)
+              this.remote.resourceIDs.push(remoteResource.id)
             }
+
+            console.debug(`Resource ${this.state.mode === 'create' ? 'created' : 'updated'}: ${resource.name}`)
           }
         })()
 
@@ -258,7 +254,7 @@ export default {
       },
 
       instances: [
-        { text: 'Development', value: 'http://localhost:5000' },
+        { text: 'Development', value: 'https://ckanadmin0.intra.dev-toronto.ca' },
         { text: 'Staging', value: 'https://ckanadmin0.intra.qa-toronto.ca' },
         { text: 'Production', value: 'https://ckanadmin.intra.prod-toronto.ca' }
       ],
