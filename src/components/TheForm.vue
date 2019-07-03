@@ -8,12 +8,14 @@
               <sui-header attached="top" textAlign="center">Origin</sui-header>
               <sui-segment attached="bottom">
                 <FormInput
+                  id="local-url"
                   title="Package URL"
                   placeholder="https://ckanadmin.prod-toronto.ca/dataset/permit"
                   icon="linkify"
                   :error="hasError"
                   @change="set"/>
                 <FormSecret
+                  id="local-key"
                   title="API Key"
                   name="local"
                   :error="errors.missing.show"
@@ -28,11 +30,13 @@
               </sui-header>
               <sui-segment attached="bottom">
                 <FormDropdown
+                  id="remote-url"
                   title="CKAN Instance"
                   :options="instances"
                   :error="errors.duplicate.show || errors.missing.show"
                   @change="set"/>
                 <FormSecret
+                  id="remote-key"
                   title="API Key"
                   name="remote"
                   :error="errors.missing.show"
