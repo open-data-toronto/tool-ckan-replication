@@ -72,6 +72,8 @@ export default {
           image_url: result.image_url
         }
 
+        context.datasetID = result.id
+
         content.resources = result.resources.map(
           r => {
             return {
@@ -80,6 +82,7 @@ export default {
               description: r.description,
               datastore_active: r.datastore_active,
               url: r.url,
+              url_type: r.url_type,
               extract_job: r.extract_job,
               format: r.format
             }
@@ -184,7 +187,7 @@ export default {
       formData.append('name', resource.name)
       formData.append('format', resource.format)
 
-      if (resource.url === 'upload') {
+      if (resource.url_type === 'upload') {
         let resourceURL = resource.url.split('/')
         let data = await axios({
           method: 'get',
@@ -218,7 +221,9 @@ export default {
         headers: {
           'Authorization': remote.key
         }
-      })
+      }).then(
+        response => response.data.result
+      )
     },
 
     /**
@@ -273,7 +278,9 @@ export default {
         headers: {
           'Authorization': remote.key
         }
-      })
+      }).then(
+        response => response.data.result
+      )
 
       let chunkSize = 5000
       for (let i = 0; i < records.length; i += chunkSize) {
@@ -283,7 +290,7 @@ export default {
           method: 'post',
           url: `${remote.url.origin}/api/3/action/datastore_upsert`,
           data: {
-            resource_id: remoteResource.id,
+            resource_id: remoteResource.resource_id,
             records: tmpArry,
             method: 'insert'
           },
@@ -292,6 +299,8 @@ export default {
           }
         })
       }
+
+      return remoteResource
     },
 
     /**
@@ -303,15 +312,18 @@ export default {
       // Delete the resources from the package one by one because CKAN doesn't
       // remove datastore tables correctly when deleting from package level
       // directly
-      if (context.hasOwnProperty('resources')) {
-        for (let resource of context.resourcesIDs) {
-          await this.deleteResource(context, resource.id)
+      
+      await (async () => {
+        if (context.hasOwnProperty('resourceIDs')) {
+          for (let rID of context.resourceIDs) {
+            await this.deleteResource(context, rID)
+          }
         }
-      }
+      })()
 
       await axios({
         method: 'post',
-        url: `${context.url.origin}/api/3/action/package_delete`,
+        url: `${context.url.origin}/api/3/action/dataset_purge`,
         data: {
           id: context.datasetID
         },
@@ -321,8 +333,8 @@ export default {
       })
     },
 
-    deleteResource: function (context, resourceID) {
-      axios({
+    deleteResource: async function (context, resourceID) {
+      await axios({
         method: 'post',
         url: `${context.url.origin}/api/3/action/resource_delete`,
         data: {
