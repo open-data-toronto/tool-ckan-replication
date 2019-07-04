@@ -135,6 +135,8 @@ export default {
           this.local.dataset
         )
         this.$set(this.remote, 'dataset', remoteDataset)
+        this.$set(this.remote, 'datasetID', remoteDataset)
+
         this.$set(this.remote, 'resourceIDs', [])
 
         await (async () => {
