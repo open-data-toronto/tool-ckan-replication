@@ -164,7 +164,7 @@ export default {
             this.local.url.origin !== this.instances[2].value
           ) {
             this.$set(this.state, 'progress', 'Deleting original dataset')
-            await this.deleteDataset(this.local)
+            // await this.deleteDataset(this.local)
           }
         })()
 
