@@ -50,11 +50,7 @@ export default {
   },
   computed: {
     action: function () {
-<<<<<<< HEAD
-      return title === 'New Dataset' ? 'Create Dataset' : 'Update Dataset'
-=======
       return this.title.startsWith('New') ? 'Create Dataset' : 'Update Dataset'
->>>>>>> 0790fe707ffb4962409e1ed81e4fa31e8b9f7f3c
     }
   },
   props: {
