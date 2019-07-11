@@ -259,7 +259,8 @@ export default {
 
       instances: [
         { text: 'Development', value: 'https://ckanadmin0.intra.dev-toronto.ca' },
-        { text: 'Staging', value: 'https://ckanadmin1.intra.qa-toronto.ca' },
+        { text: 'Staging', value: 'https://ckanadmin0.intra.qa-toronto.ca' },
+        { text: 'Cutover', value: 'https://ckanadmin1.intra.qa-toronto.ca' },
         { text: 'Production', value: 'https://ckanadmin.intra.prod-toronto.ca' }
       ],
 
