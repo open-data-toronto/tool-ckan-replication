@@ -189,19 +189,8 @@ export default {
 
       if (resource.url_type === 'upload') {
         let resourceURL = resource.url.split('/')
-        let data = await axios({
-          method: 'get',
-          url: resource.url
-        })
-
-        formData.append(
-          'upload',
-          new Blob(
-            [data.data],
-            { type: data.headers['content-type'] }
-          ),
-          resourceURL[resourceURL.length - 1]
-        )
+        let blob = await fetch(resource.url).then(r => r.blob());
+        formData.append('upload', blob, resourceURL[resourceURL.length - 1])
       } else {
         formData.append('url', resource.url)
       }
