@@ -189,7 +189,7 @@ export default {
 
       if (resource.url_type === 'upload') {
         let resourceURL = resource.url.split('/')
-        let blob = await fetch(resource.url).then(r => r.blob());
+        let blob = await fetch(resource.url).then(r => r.blob())
         formData.append('upload', blob, resourceURL[resourceURL.length - 1])
       } else {
         formData.append('url', resource.url)
@@ -275,7 +275,7 @@ export default {
       // Delete the resources from the package one by one because CKAN doesn't
       // remove datastore tables correctly when deleting from package level
       // directly
-      
+
       await (async () => {
         if (context.hasOwnProperty('resourceIDs')) {
           for (let rID of context.resourceIDs) {

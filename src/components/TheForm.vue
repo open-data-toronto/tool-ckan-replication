@@ -167,7 +167,6 @@ export default {
             // await this.deleteDataset(this.local)
           }
         })()
-
       } catch (err) {
         // Rollback on update should be different
         this.$set(this.state, 'progress', 'Rolling back changes')
