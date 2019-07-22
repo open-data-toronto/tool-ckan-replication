@@ -20,7 +20,7 @@ export default {
         params: {
           // Matches organization by name (instead of ID)
           id: organizationName
-        },
+        }
       }).then(
         response => response.data.result
       )
