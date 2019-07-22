@@ -258,10 +258,10 @@ export default {
       },
 
       instances: [
-        { text: 'Development', value: 'https://ckanadmin0.intra.dev-toronto.ca' },
-        { text: 'Staging', value: 'https://ckanadmin0.intra.qa-toronto.ca' },
-        { text: 'Cutover', value: 'https://ckanadmin1.intra.qa-toronto.ca' },
-        { text: 'Production', value: 'https://ckanadmin.intra.prod-toronto.ca' }
+        { text: 'Development (DEV0)', value: 'https://ckanadmin0.intra.dev-toronto.ca' },
+        { text: 'Staging (QA0)', value: 'https://ckanadmin0.intra.qa-toronto.ca' },
+        { text: 'Cutover (QA1)', value: 'https://ckanadmin1.intra.qa-toronto.ca' },
+        { text: 'Production (PROD)', value: 'https://ckanadmin.intra.prod-toronto.ca' }
       ],
 
       errors: {
