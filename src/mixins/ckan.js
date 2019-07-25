@@ -1,5 +1,8 @@
 const axios = require('axios')
 
+axios.defaults.headers.common['Access-Control-Allow-Origin'] = '*'
+axios.defaults.headers.common['Access-Control-Allow-Methods'] = 'GET, PUT, POST, DELETE, OPTIONS'
+
 export default {
   methods: {
     /**
@@ -13,6 +16,7 @@ export default {
       return axios({
         method: 'get',
         url: `${context.url.origin}/api/3/action/organization_show`,
+        crossDomain: true,
         params: {
           // Matches organization by name (instead of ID)
           id: organizationName
@@ -33,8 +37,9 @@ export default {
       return axios({
         method: 'get',
         url: `${context.url.origin}/api/3/action/package_show`,
+        crossDomain: true,
         params: {
-          'id': datasetID
+          id: datasetID
         },
         headers: {
           'Authorization': context.key
@@ -101,6 +106,7 @@ export default {
       let { fields, total } = await axios({
         method: 'get',
         url: `${context.url.origin}/api/3/action/datastore_search`,
+        crossDomain: true,
         params: {
           resource_id: resourceID,
           limit: 0,
@@ -113,6 +119,7 @@ export default {
       let { records } = await axios({
         method: 'get',
         url: `${context.url.origin}/api/3/action/datastore_search`,
+        crossDomain: true,
         params: {
           resource_id: resourceID,
           limit: total
@@ -160,6 +167,7 @@ export default {
       return axios({
         method: 'post',
         url: `${context.url.origin}/api/3/action/${method}`,
+        crossDomain: true,
         data: dataset,
         headers: {
           'Authorization': context.key
@@ -189,7 +197,7 @@ export default {
 
       if (resource.url_type === 'upload') {
         let resourceURL = resource.url.split('/')
-        let blob = await fetch(resource.url).then(r => r.blob());
+        let blob = await fetch(resource.url).then(r => r.blob())
         formData.append('upload', blob, resourceURL[resourceURL.length - 1])
       } else {
         formData.append('url', resource.url)
@@ -206,6 +214,7 @@ export default {
       return axios({
         method: 'post',
         url: `${remote.url.origin}/api/3/action/${method}`,
+        crossDomain: true,
         data: formData,
         headers: {
           'Authorization': remote.key
@@ -245,6 +254,7 @@ export default {
         await axios({
           method: 'post',
           url: `${remote.url.origin}/api/3/action/datastore_delete`,
+          crossDomain: true,
           data: {
             id: remoteResource[0].id
           },
@@ -259,6 +269,7 @@ export default {
       return axios({
         method: 'post',
         url: `${remote.url.origin}/api/3/action/datastore_create`,
+        crossDomain: true,
         data: params,
         headers: {
           'Authorization': remote.key
@@ -275,7 +286,7 @@ export default {
       // Delete the resources from the package one by one because CKAN doesn't
       // remove datastore tables correctly when deleting from package level
       // directly
-      
+
       await (async () => {
         if (context.hasOwnProperty('resourceIDs')) {
           for (let rID of context.resourceIDs) {
@@ -287,6 +298,7 @@ export default {
       await axios({
         method: 'post',
         url: `${context.url.origin}/api/3/action/dataset_purge`,
+        crossDomain: true,
         data: {
           id: context.datasetID
         },
@@ -300,6 +312,7 @@ export default {
       await axios({
         method: 'post',
         url: `${context.url.origin}/api/3/action/resource_delete`,
+        crossDomain: true,
         data: {
           id: resourceID
         },
