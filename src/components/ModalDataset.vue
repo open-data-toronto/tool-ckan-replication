@@ -9,9 +9,9 @@
     <sui-modal
       v-model="open"
       v-bind:closable="false"
-      v-if="content.dataset !== undefined">
+      v-if="'dataset' in content && 'resources' in content">
       <sui-dimmer :active="dim">
-        <sui-loader>{{ progress }}</sui-loader>
+        <sui-loader>Working out magic</sui-loader>
       </sui-dimmer>
       <sui-modal-header>
         {{ title }}
@@ -33,7 +33,7 @@
           Cancel
         </sui-button>
         <sui-button type="button" primary @click="$emit('submit')">
-          {{ action }}
+          {{ title.replace('New', 'Create') }}
         </sui-button>
       </sui-modal-actions>
     </sui-modal>
@@ -48,15 +48,9 @@ export default {
   components: {
     TableDisplay
   },
-  computed: {
-    action: function () {
-      return this.title.startsWith('New') ? 'Create Dataset' : 'Update Dataset'
-    }
-  },
   props: {
     title: String,
     content: Object,
-    progress: String,
     dim: Boolean,
     open: Boolean
   }

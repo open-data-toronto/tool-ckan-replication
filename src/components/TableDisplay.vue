@@ -8,8 +8,7 @@
     <sui-table-body>
       <sui-table-row
         v-for="(value, key) in content"
-        :key="key"
-        v-show="key !== 'id' && key !== 'url' && key !== 'name'">
+        :key="key">
         <sui-table-cell>
           <sui-label>{{ key }}</sui-label>
         </sui-table-cell>
