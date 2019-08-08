@@ -11,7 +11,7 @@
       v-bind:closable="false"
       v-if="'dataset' in content && 'resources' in content">
       <sui-dimmer :active="dim">
-        <sui-loader>Working out magic</sui-loader>
+        <sui-loader>Working our magic</sui-loader>
       </sui-dimmer>
       <sui-modal-header>
         {{ title }}
