@@ -118,17 +118,33 @@ export default {
 
     // replicate() creates the source package and resources in the target CKAN
     replicate: async function () {
-      // let verb = this.state.mode === 'create' ? 'Creating' : 'Updating'
-      // this.$set(this.state, 'wait', true)
-      //
-      // // do repliaction stuff here
-      //
-      // this.$set(this.state, 'display', false)
-      // window.open(
-      //   `${this.to.url.origin}/dataset/${this.pID}`,
-      //   '_blank'
-      // )
-      // this.$set(this.state, 'wait', false)
+      this.$set(this.state, 'wait', true)
+
+      await axios({
+        method: 'post',
+        url: this.config.controller,
+        data: {
+          from: this.from,
+          to: this.to,
+          mode: this.state.mode,
+          packageID: this.content.packageID,
+          clean: true,
+          step: 'replicate'
+        },
+        headers: {
+          'X-Api-Key': this.config.secret
+        }
+      }).then(
+        response => response.data
+      )
+
+      this.$set(this.state, 'display', false)
+      window.open(
+        `${this.to.url}/dataset/${this.content.packageID}`,
+        '_blank'
+      )
+
+      this.$set(this.state, 'wait', false)
     },
 
     // set() updates and validates the input variables
