@@ -5,8 +5,13 @@ import requests
 
 from urllib.parse import urljoin
 
-def lambda_handler(event, context):
-    params = json.loads(event['body'])
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route('/api/<string:body>', methods=['GET'])
+def lambda_handler(body):
+    params = json.loads(body)
 
     # Moving from CKAN A to CKAN B
     a = ckanapi.RemoteCKAN(**params['from'])
@@ -26,13 +31,7 @@ def lambda_handler(event, context):
         raise Exception('The step {0} is not a validate function for this tool \
             to perform'.format(params['step']))
 
-    return {
-        'statusCode': 200,
-        'headers': {
-            'Access-Control-Allow-Origin': '*',
-        },
-        'body': json.dumps(body),
-    }
+    return jsonify(body), 200
 
 def get_package(ckan, pid):
     package = ckan.action.package_show(id=pid)
@@ -146,3 +145,6 @@ def replicate(a, b, pid, mode):
 
 def clean(ckan, pid):
     ckan.action.dataset_purge(id=pid)
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5001)
