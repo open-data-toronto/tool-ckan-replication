@@ -6,7 +6,7 @@
       :icon="icon"
       iconPosition="left"
       v-model="value"
-      @change="$emit('change', $event.target.value, 'from', 'url')"/>
+      @change="$emit('change', $event.target.value, 'from', 'address')"/>
   </sui-form-field>
 </template>
 

@@ -6,7 +6,7 @@
       icon="lock"
       iconPosition="left"
       v-model="value"
-      @change="$emit('change', $event.target.value, name, 'key')"/>
+      @change="$emit('change', $event.target.value, name, 'apikey')"/>
   </sui-form-field>
 </template>
 

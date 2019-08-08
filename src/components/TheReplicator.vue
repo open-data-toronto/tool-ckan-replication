@@ -80,9 +80,6 @@ export default {
     ModalDataset
   },
   computed: {
-    pID: function () {
-      return this.from.url.pathname.split('/')[2]
-    },
     hasError: function () {
       for (let error of Object.values(this.errors)) {
         if (error.show) {
@@ -101,15 +98,9 @@ export default {
         method: 'post',
         url: this.config.controller,
         data: {
-          from: {
-            address: this.from.url.origin,
-            apikey: this.from.key
-          },
-          to: {
-            address: this.to.url.origin,
-            apikey: this.to.key
-          },
-          package: this.pID,
+          from: this.from,
+          to: this.to,
+          packageID: this.content.packageID,
           step: 'display'
         },
         headers: {
@@ -119,43 +110,8 @@ export default {
         response => {
           this.$set(this.state, 'mode', response.data.mode)
 
-          let result = response.data.package
-          this.$set(this.content, 'dataset', {
-            name: result.name,
-            title: result.title,
-            collection_method: result.collection_method,
-            excerpt: result.excerpt,
-            limitations: result.limitations,
-            notes: result.notes,
-            dataset_category: result.dataset_category,
-            information_url: result.information_url,
-            image_url: result.image_url,
-            is_retired: result.is_retired,
-            refresh_rate: result.refresh_rate,
-            tags: result.tags.map(
-              t => t.name
-            ).join(','),
-            topics: result.topics,
-            owner_division: result.owner_division,
-            owner_section: result.owner_section,
-            owner_unit: result.owner_unit,
-            owner_email: result.owner_email
-          })
-
-          this.$set(this.content, 'resources', result.resources.map(
-            r => {
-              return {
-                id: r.id,
-                name: r.name,
-                description: r.description,
-                datastore_active: r.datastore_active,
-                url: r.url,
-                url_type: r.url_type,
-                extract_job: r.extract_job,
-                format: r.format
-              }
-            })
-          )
+          this.$set(this.content, 'dataset', response.data.package)
+          this.$set(this.content, 'resources', response.data.resources)
         }
       )
     },
@@ -177,46 +133,42 @@ export default {
 
     // set() updates and validates the input variables
     set: function (value, loc, key) {
-      let update = loc === 'from' ? this.from : this.to
+      if (key === 'address') {
+        try {
+          let link = new URL(value)
+          this.$set(this[loc], key, link.origin)
 
-      if (key === 'url') {
-        // Try to convert the input string to an URL
-        if (loc === 'from') {
-          try {
-            this.$set(update, key, new URL(value))
-
-            this.errors.url.show = false
-          } catch {
-            this.$set(update, key, '')
-
-            this.errors.url.show = true
+          if (loc === 'from') {
+            this.$set(this.content, 'packageID', link.pathname.split('/')[2])
           }
-        } else {
-          this.$set(update, key, new URL(value))
+
+          this.errors.url.show = false
+        } catch {
+          this.$set(this[loc], key, '')
+
+          this.errors.url.show = true
         }
 
         // Validate the the source and target URLs are not the same
         if (
-          this.to.hasOwnProperty('url') &&
-          this.from.hasOwnProperty('url')
+          this.to.hasOwnProperty('address') && this.from.hasOwnProperty('address')
         ) {
-          this.errors.duplicate.show =
-            this.to.url.origin === this.from.url.origin &&
-            this.to.url.origin.indexOf('localhost') === -1
+          this.errors.duplicate.show = this.to.address === this.from.address
         }
       } else {
-        this.$set(update, key, value)
+        this.$set(this[loc], key, value)
       }
     },
 
     // toggle() show/hides the validate metadata modal
     toggle: function () {
       if (!this.state.display) {
+        console.log(this.from, this.to)
         this.errors.missing.show = (
-          !this.from.url ||
-          !this.from.key ||
-          !this.to.url ||
-          !this.to.key
+          !this.from.address ||
+          !this.from.apikey ||
+          !this.to.address ||
+          !this.to.apikey
         )
 
         if (!this.hasError) {
@@ -235,14 +187,8 @@ export default {
   data () {
     return {
       config: json,
-      from: {
-        url: new URL('https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/bodysafe'),
-        key: '1'
-      },
-      to: {
-        url: new URL('https://ckan0.cf.opendata.inter.prod-toronto.ca'),
-        key: '2'
-      },
+      from: {},
+      to: {},
       content: {},
       state: {
         display: false, // track if modal is open

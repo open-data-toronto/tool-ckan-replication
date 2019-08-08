@@ -18,7 +18,7 @@ export default {
   },
   watch: {
     value: function (value) {
-      this.$emit('change', value, 'to', 'url')
+      this.$emit('change', value, 'to', 'address')
     }
   },
   data () {
