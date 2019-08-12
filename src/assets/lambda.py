@@ -46,7 +46,7 @@ def get_package(ckan, pid):
         if k not in [
             'name', 'title', 'resources',
             'notes', 'collection_method', 'excerpt', 'limitations',
-            'dataset_category', 'image_url', 'information_url', 'is_retired', 'refresh_rate', 'tags', 'topics',
+            'dataset_category', 'image_url', 'information_url', 'is_retired', 'refresh_rate', 'tags', 'civic_issues', 'topics',
             'owner_division', 'owner_section', 'owner_unit', 'owner_email'
         ]:
             package.pop(k)
@@ -76,7 +76,11 @@ def replicate(a, b, pid, mode):
     package = get_package(a, pid)
     resources = package.pop('resources')
 
+    package['license_id'] = 'other-open'
+
     if mode == 'create':
+        package['owner_org'] = 'city-of-toronto'
+
         target = b.action.package_create(**package)
     elif mode == 'update':
         package['id'] = package['name']

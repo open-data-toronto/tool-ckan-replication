@@ -126,10 +126,10 @@ export default {
         data: {
           from: this.from,
           to: this.to,
-          mode: this.state.mode,
           packageID: this.content.packageID,
-          clean: true,
-          step: 'replicate'
+          step: 'replicate',
+          mode: this.state.mode,
+          clean: false
         },
         headers: {
           'X-Api-Key': this.config.secret
