@@ -101,6 +101,9 @@ def replicate(a, b, pid, mode):
     resources = package.pop('resources')
 
     package['license_id'] = 'other-open'
+    package['tags'] = [{
+        'name': t
+    } for t in package['tags'].split(',')]
 
     if mode == 'create':
         package['owner_org'] = 'city-of-toronto'
