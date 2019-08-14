@@ -3,36 +3,60 @@ import json
 import ckanapi
 import requests
 
-from urllib.parse import urljoin
+from urllib.parse import unquote, urljoin
 
 def lambda_handler(event, context):
-    params = json.loads(event['body'])
+    try:
+        params = json.loads(unquote(event['body']))
+
+        if not ('from' in params and 'to' in params and 'packageID' in params):
+            return build_response(400, 'Missing required CKAN or package information')
+
+        if not ('step' in params and params['step'] in ['display', 'replicate']):
+            return build_response(400, 'Invalid step parameter provided')
+
+    except ValueError as e:
+        return build_response(400, 'Provided input parameters can not be parsed')
 
     # Moving from CKAN A to CKAN B
     a = ckanapi.RemoteCKAN(**params['from'])
     b = ckanapi.RemoteCKAN(**params['to'])
 
-    if params['step'] == 'display':
-        body = display(a, b, params['packageID'])
-    elif params['step'] == 'replicate':
+    if params['step'] == 'replicate':
+        if not ('mode' in params and params['mode'] in ['create', 'update']):
+            return build_response(400, 'Invalid mode parameter provided')
+
+        if not 'clean' in params:
+            params['clean'] = False
+
         try:
             body = replicate(a, b, params['packageID'], params['mode'])
-        except:
+        except Exception as e:
             clean(b, params['packageID'])
+
+            return build_response(500, e)
 
         if not 'prod' in a.address and params['clean']:
             clean(a, params['packageID'])
-    else:
-        raise Exception('The step {0} is not a validate function for this tool \
-            to perform'.format(params['step']))
 
-    return {
-        'statusCode': 200,
+        return build_response(201)
+    else: # display
+        body = display(a, b, params['packageID'])
+
+        return build_response(200, json.dumps(body))
+
+def build_response(code, message=''):
+    response = {
+        'statusCode': code,
         'headers': {
             'Access-Control-Allow-Origin': '*',
-        },
-        'body': json.dumps(body),
+        }
     }
+
+    if message:
+        response['body'] = message
+
+    return response
 
 def get_package(ckan, pid):
     package = ckan.action.package_show(id=pid)
