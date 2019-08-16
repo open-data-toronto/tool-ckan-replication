@@ -66,8 +66,6 @@ import ErrorMessage from '@/components/ErrorMessage.vue'
 
 import ModalDataset from '@/components/ModalDataset.vue'
 
-import json from '@/assets/config.json'
-
 const axios = require('axios')
 
 export default {
@@ -96,15 +94,12 @@ export default {
     display: async function () {
       await axios({
         method: 'post',
-        url: this.config.controller,
+        url: this.lambda,
         data: {
           from: this.from,
           to: this.to,
           packageID: this.content.packageID,
           step: 'display'
-        },
-        headers: {
-          'X-Api-Key': this.config.secret
         }
       }).then(
         response => {
@@ -122,7 +117,7 @@ export default {
 
       await axios({
         method: 'post',
-        url: this.config.controller,
+        url: this.lambda,
         data: {
           from: this.from,
           to: this.to,
@@ -130,9 +125,6 @@ export default {
           step: 'replicate',
           mode: this.state.mode,
           clean: false
-        },
-        headers: {
-          'X-Api-Key': this.config.secret
         }
       }).then(
         response => response.data
@@ -202,7 +194,7 @@ export default {
 
   data () {
     return {
-      config: json,
+      lambda: 'https://ckantool0.intra.sandbox-toronto.ca',
       from: {},
       to: {},
       content: {},
